@@ -27,7 +27,7 @@ from typing import Optional
 
 from client.network.client import ChatClient
 from client.commands.parser import CommandHandler
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from shared.constants import DEFAULT_HOST, DEFAULT_PORT, DISPLAY_TIME_FORMAT
 
 
 class ChatRoomApp(App):
@@ -400,28 +400,39 @@ class ChatRoomApp(App):
         if not self.chat_log:
             return
 
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        # 按照设计文档格式：Alice                    <Sat May 24 23:12:36 CST 2025>
+        #                        >hello Bob!🥰
+        timestamp = datetime.now().strftime(DISPLAY_TIME_FORMAT)
 
+        # 第一行：用户名和时间戳
+        header_line = Text()
         if is_self:
-            # 自己的消息
-            message = Text()
-            message.append(f"[{timestamp}] ", style="dim")
-            message.append(f"{sender}: ", style="bold green")
-            message.append(content)
+            header_line.append(f"{sender:<30}", style="bold green")
         else:
-            # 他人的消息
-            message = Text()
-            message.append(f"[{timestamp}] ", style="dim")
-            message.append(f"{sender}: ", style="bold blue")
-            message.append(content)
+            header_line.append(f"{sender:<30}", style="bold blue")
+        header_line.append(f"{timestamp}", style="dim")
 
-        self.chat_log.write(message)
+        # 第二行：消息内容（带>前缀）
+        content_line = Text()
+        content_line.append(">", style="dim")
+        if is_self:
+            content_line.append(content, style="green")
+        else:
+            content_line.append(content)
+
+        # 写入两行
+        self.chat_log.write(header_line)
+        self.chat_log.write(content_line)
+
+        # 添加空行分隔
+        self.chat_log.write("")
 
     def add_system_message(self, content: str):
         """添加系统消息"""
         if not self.chat_log:
             return
 
+        # 系统消息使用简化格式
         timestamp = datetime.now().strftime("%H:%M:%S")
         message = Text()
         message.append(f"[{timestamp}] ", style="dim")
@@ -435,6 +446,7 @@ class ChatRoomApp(App):
         if not self.chat_log:
             return
 
+        # 错误消息使用简化格式
         timestamp = datetime.now().strftime("%H:%M:%S")
         message = Text()
         message.append(f"[{timestamp}] ", style="dim")
