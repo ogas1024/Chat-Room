@@ -113,6 +113,18 @@ class CommandParser:
             "handler": None
         })
         
+        # AI相关命令
+        self.register_command("ai", {
+            "description": "AI助手相关命令",
+            "usage": "/ai <status|clear|help> [消息]",
+            "options": {
+                "status": "查看AI状态",
+                "clear": "清除对话上下文",
+                "help": "显示AI帮助"
+            },
+            "handler": None
+        })
+
         # 系统命令
         self.register_command("exit", {
             "description": "退出系统",
@@ -238,6 +250,7 @@ class CommandHandler:
             "join_chat": self.handle_join_chat,
             "send_files": self.handle_send_files,
             "recv_files": self.handle_recv_files,
+            "ai": self.handle_ai,
             "exit": self.handle_exit,
         }
     
@@ -546,7 +559,21 @@ class CommandHandler:
 
         else:
             return False, f"未知选项: {option}。支持的选项: -l, -n, -a"
-    
+
+    def handle_ai(self, command: Command) -> tuple[bool, str]:
+        """处理AI命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not command.args:
+            return False, "请指定AI命令: status, clear, help 或直接输入消息"
+
+        ai_command = command.args[0].lower()
+
+        # 发送AI命令请求
+        success, response = self.chat_client.send_ai_request(ai_command)
+        return success, response
+
     def handle_exit(self, command: Command) -> tuple[bool, str]:
         """处理退出命令"""
         # 断开连接

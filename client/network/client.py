@@ -737,3 +737,49 @@ class ChatClient:
                 return False, response.error_message
 
         return False, "服务器无响应"
+
+    def send_ai_request(self, command: str, message: str = None,
+                       chat_group_id: int = None) -> tuple[bool, str]:
+        """发送AI请求
+
+        Args:
+            command: AI命令 (status, clear, help)
+            message: AI聊天消息 (可选)
+            chat_group_id: 聊天组ID (None表示私聊)
+        """
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送AI请求
+        request = BaseMessage(
+            message_type=MessageType.AI_CHAT_REQUEST,
+            command=command,
+            message=message,
+            chat_group_id=chat_group_id
+        )
+
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=30.0,  # AI响应可能需要更长时间
+            message_types=[MessageType.AI_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.AI_CHAT_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, response.message or "AI响应成功"
+                else:
+                    return False, response.message or "AI响应失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"

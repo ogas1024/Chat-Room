@@ -205,6 +205,12 @@ class ChatRoomApp(App):
         self.chat_client.network_client.set_message_handler(
             MessageType.USER_STATUS_UPDATE, self.handle_user_status_update
         )
+        self.chat_client.network_client.set_message_handler(
+            MessageType.FILE_NOTIFICATION, self.handle_file_notification
+        )
+        self.chat_client.network_client.set_message_handler(
+            MessageType.AI_CHAT_RESPONSE, self.handle_ai_response
+        )
     
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """处理输入提交"""
@@ -527,6 +533,31 @@ class ChatRoomApp(App):
 
         # 更新用户在线状态显示
         self.update_status_area()
+
+    def handle_file_notification(self, message):
+        """处理文件通知消息"""
+        # 文件通知作为系统消息显示
+        self.add_system_message(message.content)
+
+    def handle_ai_response(self, message):
+        """处理AI响应消息"""
+        if hasattr(message, 'message') and message.message:
+            # AI响应作为系统消息显示，带特殊标识
+            self.add_ai_message(message.message)
+
+    def add_ai_message(self, content: str):
+        """添加AI消息"""
+        if not self.chat_log:
+            return
+
+        # AI消息使用特殊格式
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        message = Text()
+        message.append(f"[{timestamp}] ", style="dim")
+        message.append("🤖 AI助手: ", style="bold cyan")
+        message.append(content, style="cyan")
+
+        self.chat_log.write(message)
 
     # 应用生命周期
     def on_unmount(self) -> None:

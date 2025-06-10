@@ -14,6 +14,8 @@ from typing import Dict, Any, Optional
 
 from server.core.user_manager import UserManager
 from server.core.chat_manager import ChatManager
+from server.ai.ai_manager import AIManager
+from server.config.ai_config import get_ai_config
 from server.database.connection import init_database
 from server.utils.auth import (
     validate_username, validate_password, validate_chat_group_name,
@@ -22,7 +24,7 @@ from server.utils.auth import (
 from shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
     MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
-    MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
+    MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
 )
 from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
@@ -49,6 +51,10 @@ class ChatRoomServer:
         # 初始化管理器
         self.user_manager = UserManager()
         self.chat_manager = ChatManager(self.user_manager)
+
+        # 初始化AI管理器
+        ai_config = get_ai_config()
+        self.ai_manager = AIManager(ai_config.get_api_key())
         
         print(f"聊天室服务器初始化完成 - {host}:{port}")
     
@@ -172,6 +178,8 @@ class ChatRoomServer:
                 self.handle_file_download_request(client_socket, message)
             elif message.message_type == MessageType.FILE_LIST_REQUEST:
                 self.handle_file_list_request(client_socket, message)
+            elif message.message_type == MessageType.AI_CHAT_REQUEST:
+                self.handle_ai_chat_request(client_socket, message)
             elif message.message_type == MessageType.LOGOUT_REQUEST:
                 self.handle_logout(client_socket)
             else:
@@ -272,6 +280,23 @@ class ChatRoomServer:
 
             # 广播消息到聊天组
             self.chat_manager.broadcast_message_to_group(chat_message)
+
+            # 检查是否需要AI回复
+            if self.ai_manager.is_enabled():
+                ai_reply = self.ai_manager.process_message(
+                    user_info['user_id'],
+                    user_info['username'],
+                    content,
+                    message.chat_group_id
+                )
+
+                if ai_reply:
+                    # 创建AI回复消息
+                    ai_message = self.chat_manager.send_message(
+                        AI_USER_ID, message.chat_group_id, ai_reply
+                    )
+                    # 广播AI回复
+                    self.chat_manager.broadcast_message_to_group(ai_message)
 
         except PermissionDeniedError as e:
             self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, str(e))
@@ -763,3 +788,57 @@ class ChatRoomServer:
         except Exception as e:
             print(f"文件列表请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取文件列表失败")
+
+    def handle_ai_chat_request(self, client_socket: socket.socket, message: BaseMessage):
+        """处理AI聊天请求"""
+        try:
+            # 验证用户登录
+            user_info = self.user_manager.get_user_by_socket(client_socket)
+            if not user_info:
+                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
+                return
+
+            # 检查AI功能是否启用
+            if not self.ai_manager.is_enabled():
+                self.send_error(client_socket, ErrorCode.SERVER_ERROR, "AI功能未启用")
+                return
+
+            # 获取请求数据
+            request_data = getattr(message, 'to_dict', lambda: {})()
+            user_message = request_data.get('message', '')
+            chat_group_id = request_data.get('chat_group_id')  # None表示私聊
+            command = request_data.get('command', '')
+
+            # 处理AI命令
+            if command:
+                ai_response = self.ai_manager.handle_ai_command(
+                    command, user_info['user_id'], chat_group_id
+                )
+            else:
+                # 处理普通AI聊天
+                if not user_message:
+                    self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "消息内容不能为空")
+                    return
+
+                ai_response = self.ai_manager.process_message(
+                    user_info['user_id'],
+                    user_info['username'],
+                    user_message,
+                    chat_group_id
+                )
+
+                if not ai_response:
+                    ai_response = "抱歉，我现在无法回复您的消息。"
+
+            # 发送AI响应
+            from shared.messages import BaseMessage
+            response = BaseMessage(
+                message_type=MessageType.AI_CHAT_RESPONSE,
+                success=True,
+                message=ai_response
+            )
+            self.send_message(client_socket, response)
+
+        except Exception as e:
+            print(f"AI聊天请求处理错误: {e}")
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "AI聊天处理失败")
