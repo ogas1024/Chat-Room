@@ -5,7 +5,7 @@ AI配置文件
 """
 
 from typing import Optional
-from .server_config import get_server_config
+from server.config.server_config import get_server_config
 
 
 class AIConfig:

@@ -58,6 +58,7 @@ class LoginResponse(BaseMessage):
     user_id: Optional[int] = None
     username: Optional[str] = None
     error_message: Optional[str] = None
+    current_chat_group: Optional[Dict[str, Any]] = None
 
 
 @dataclass

@@ -7,9 +7,9 @@ import socket
 from typing import Optional, Dict, Any, Callable
 from functools import wraps
 
-from ...shared.constants import ErrorCode
-from ...shared.messages import BaseMessage, ErrorMessage
-from ...shared.exceptions import AuthenticationError, PermissionDeniedError
+from shared.constants import ErrorCode
+from shared.messages import BaseMessage, ErrorMessage
+from shared.exceptions import AuthenticationError, PermissionDeniedError
 
 
 def require_login(func: Callable) -> Callable:
@@ -72,7 +72,7 @@ class ResponseHelper:
     @staticmethod
     def send_success_response(client_socket: socket.socket, message: str):
         """发送成功响应"""
-        from ...shared.messages import SystemMessage
+        from shared.messages import SystemMessage
         response = SystemMessage(content=message)
         ResponseHelper.send_message(client_socket, response)
 

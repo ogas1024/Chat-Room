@@ -3,8 +3,8 @@
 统一处理客户端命令
 """
 
-from typing import Dict, Callable, Any
-from .network.client import ChatClient
+from typing import Dict, Callable
+from client.network.client import ChatClient
 
 
 class CommandHandler:

@@ -44,7 +44,7 @@ class ZhipuClient:
         else:
             # 从配置文件获取API密钥
             try:
-                from .config.server_config import get_server_config
+                from server.config.server_config import get_server_config
                 server_config = get_server_config()
                 self.api_key = server_config.get_ai_api_key()
             except Exception:

@@ -8,8 +8,8 @@ import threading
 import time
 from typing import Callable, Optional, Dict, Any, List
 
-from ...shared.constants import DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE
-from ...shared.messages import BaseMessage, parse_message
+from shared.constants import DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE
+from shared.messages import BaseMessage, parse_message
 
 
 class NetworkClient:
@@ -203,7 +203,7 @@ class ChatClient:
     
     def _setup_message_handlers(self):
         """设置消息处理器"""
-        from ...shared.constants import MessageType
+        from shared.constants import MessageType
         
         # 设置各种消息类型的处理器
         self.network_client.set_message_handler(
@@ -234,8 +234,8 @@ class ChatClient:
     
     def login(self, username: str, password: str) -> tuple[bool, str]:
         """用户登录"""
-        from ...shared.messages import LoginRequest
-        from ...shared.constants import MessageType
+        from shared.messages import LoginRequest
+        from shared.constants import MessageType
 
         if not self.network_client.is_connected():
             return False, "未连接到服务器"
@@ -257,6 +257,9 @@ class ChatClient:
                     'id': response.user_id,
                     'username': response.username
                 }
+                # 设置当前聊天组（如果服务器提供了）
+                if hasattr(response, 'current_chat_group') and response.current_chat_group:
+                    self.current_chat_group = response.current_chat_group
                 return True, "登录成功"
             elif hasattr(response, 'error_message'):
                 return False, response.error_message
@@ -267,8 +270,8 @@ class ChatClient:
     
     def register(self, username: str, password: str) -> tuple[bool, str]:
         """用户注册"""
-        from ...shared.messages import RegisterRequest
-        from ...shared.constants import MessageType
+        from shared.messages import RegisterRequest
+        from shared.constants import MessageType
 
         if not self.network_client.is_connected():
             return False, "未连接到服务器"
@@ -296,7 +299,7 @@ class ChatClient:
     
     def send_chat_message(self, content: str, group_id: int) -> bool:
         """发送聊天消息"""
-        from ...shared.messages import ChatMessage
+        from shared.messages import ChatMessage
         
         if not self.current_user:
             return False
@@ -343,8 +346,8 @@ class ChatClient:
 
     def get_user_info(self) -> tuple[bool, str, Optional[Dict[str, Any]]]:
         """获取用户信息"""
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录", None
@@ -388,8 +391,8 @@ class ChatClient:
         Args:
             list_type: 列表类型 ("all", "current_chat")
         """
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录", None
@@ -433,8 +436,8 @@ class ChatClient:
         Args:
             list_type: 列表类型 ("joined", "all")
         """
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录", None
@@ -480,8 +483,8 @@ class ChatClient:
             group_name: 聊天组名称
             member_usernames: 初始成员用户名列表
         """
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -517,8 +520,8 @@ class ChatClient:
 
     def join_chat_group(self, group_name: str) -> tuple[bool, str]:
         """加入聊天组"""
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -553,8 +556,8 @@ class ChatClient:
 
     def enter_chat_group(self, group_name: str) -> tuple[bool, str]:
         """进入聊天组（切换当前聊天组）"""
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -596,8 +599,8 @@ class ChatClient:
 
     def list_files(self, chat_group_id: int = None) -> tuple[bool, str, Optional[List[Dict[str, Any]]]]:
         """获取聊天组文件列表"""
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录", None
@@ -644,8 +647,8 @@ class ChatClient:
     def send_file(self, file_path: str) -> tuple[bool, str]:
         """发送文件到当前聊天组"""
         import os
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType, MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType, MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -701,8 +704,8 @@ class ChatClient:
 
     def download_file(self, file_id: int, save_path: str = None) -> tuple[bool, str]:
         """下载文件"""
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -745,8 +748,8 @@ class ChatClient:
             message: AI聊天消息 (可选)
             chat_group_id: 聊天组ID (None表示私聊)
         """
-        from ...shared.messages import BaseMessage
-        from ...shared.constants import MessageType
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
 
         if not self.is_logged_in():
             return False, "请先登录"

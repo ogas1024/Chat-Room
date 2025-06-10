@@ -20,7 +20,7 @@ def demo_ai_setup_guide():
     print("🤖 智谱AI功能演示")
     print("=" * 60)
     
-    from src.server.config.ai_config import print_ai_setup_guide
+    from server.config.ai_config import print_ai_setup_guide
     print_ai_setup_guide()
 
 
@@ -29,7 +29,7 @@ def demo_ai_config():
     print("\n📋 AI配置演示")
     print("-" * 40)
     
-    from src.server.config.ai_config import get_ai_config
+    from server.config.ai_config import get_ai_config
     
     config = get_ai_config()
     
@@ -64,7 +64,7 @@ def demo_zhipu_client():
         return
     
     try:
-        from src.server.ai.zhipu_client import ZhipuClient
+        from server.ai.zhipu_client import ZhipuClient
         
         client = ZhipuClient(api_key)
         
@@ -110,7 +110,7 @@ def demo_ai_manager():
     api_key = os.getenv('ZHIPU_API_KEY')
     
     try:
-        from src.server.ai.ai_manager import AIManager
+        from server.ai.ai_manager import AIManager
         
         manager = AIManager(api_key)
         
@@ -170,7 +170,7 @@ def demo_context_management():
     print("-" * 40)
     
     try:
-        from src.server.ai.context_manager import ContextManager
+        from server.ai.context_manager import ContextManager
         
         manager = ContextManager()
         
@@ -239,7 +239,7 @@ def demo_model_comparison():
         return
     
     try:
-        from src.server.ai.zhipu_client import ZhipuClient
+        from server.ai.zhipu_client import ZhipuClient
         
         # 测试不同模型
         models_to_test = ["glm-4-flash", "glm-4"]

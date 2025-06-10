@@ -5,9 +5,9 @@
 
 import sys
 
-from .network.client import ChatClient
-from .commands.parser import CommandHandler
-from ..shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from client.network.client import ChatClient
+from client.commands.parser import CommandHandler
+from shared.constants import DEFAULT_HOST, DEFAULT_PORT
 
 
 def get_user_input(prompt: str, required: bool = True) -> str:
@@ -245,7 +245,7 @@ def main():
         if args.mode == 'tui':
             # 使用TUI界面
             try:
-                from .ui.app import run_chat_app
+                from client.ui.app import run_chat_app
                 run_chat_app(args.host, args.port)
             except ImportError as e:
                 print(f"TUI模式需要textual库: {e}")

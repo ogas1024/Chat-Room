@@ -6,7 +6,7 @@ AI对话上下文管理器
 import time
 from typing import Dict, List, Optional
 from collections import defaultdict, deque
-from .zhipu_client import AIMessage
+from server.ai.zhipu_client import AIMessage
 
 
 class ContextManager:

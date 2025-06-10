@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from functools import wraps
 
-from ...shared.constants import COMMAND_PREFIX
+from shared.constants import COMMAND_PREFIX
 
 
 def require_login(func: Callable) -> Callable:

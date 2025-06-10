@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.align import Align
 
-from .themes import get_current_theme, get_message_style, get_status_style
+from client.ui.themes import get_current_theme, get_message_style, get_status_style
 
 
 class EnhancedChatLog(RichLog):

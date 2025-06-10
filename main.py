@@ -17,8 +17,8 @@ if str(project_root) not in sys.path:
 def run_server(args):
     """启动服务器"""
     try:
-        from src.server.main import main as server_main
-        
+        from server.main import main as server_main
+
         # 设置服务器参数
         sys.argv = ['server']
         if args.host:
@@ -27,7 +27,7 @@ def run_server(args):
             sys.argv.extend(['--port', str(args.port)])
         if args.debug:
             sys.argv.append('--debug')
-        
+
         server_main()
     except ImportError as e:
         print(f"❌ 服务器模块导入失败: {e}")
@@ -37,8 +37,8 @@ def run_server(args):
 def run_client(args):
     """启动客户端"""
     try:
-        from src.client.main import main as client_main
-        
+        from client.main import main as client_main
+
         # 设置客户端参数
         sys.argv = ['client']
         if args.host:
@@ -47,7 +47,7 @@ def run_client(args):
             sys.argv.extend(['--port', str(args.port)])
         if args.mode:
             sys.argv.extend(['--mode', args.mode])
-        
+
         client_main()
     except ImportError as e:
         print(f"❌ 客户端模块导入失败: {e}")
@@ -92,7 +92,7 @@ def run_test(args):
         if args.verbose:
             test_args.append('-v')
         if args.coverage:
-            test_args.extend(['--cov=src', '--cov-report=html'])
+            test_args.extend(['--cov=server', '--cov=client', '--cov=shared', '--cov-report=html'])
         
         pytest.main(test_args)
     except ImportError:

@@ -14,8 +14,8 @@ project_root = Path(__file__).parent.parent.absolute()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.server.core.server import ChatRoomServer
-from src.client.network.client import ChatClient
+from server.core.server import ChatRoomServer
+from client.network.client import ChatClient
 
 
 def demo_server():

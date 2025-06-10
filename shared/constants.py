@@ -15,28 +15,8 @@ DATABASE_PATH = "server/data/chatroom.db"
 FILES_STORAGE_PATH = "server/data/files"
 
 
-def get_client_constants():
-    """
-    从配置文件获取客户端常量
-    如果配置文件不可用，返回默认值
-    """
-    try:
-        from ..client.config.client_config import get_client_config
-        config = get_client_config()
-        return {
-            'DEFAULT_HOST': config.get_default_host(),
-            'DEFAULT_PORT': config.get_default_port(),
-            'CONNECTION_TIMEOUT': config.get_connection_timeout(),
-            'BUFFER_SIZE': config.config_manager.get("performance.buffer_size", BUFFER_SIZE)
-        }
-    except Exception:
-        # 配置文件不可用时使用默认值
-        return {
-            'DEFAULT_HOST': DEFAULT_HOST,
-            'DEFAULT_PORT': DEFAULT_PORT,
-            'CONNECTION_TIMEOUT': 10,
-            'BUFFER_SIZE': BUFFER_SIZE
-        }
+# 移除可能导致循环导入的函数
+# 客户端配置应该直接在客户端模块中处理
 
 # 消息类型常量
 class MessageType:

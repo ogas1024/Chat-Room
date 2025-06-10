@@ -9,28 +9,28 @@ import json
 import os
 import uuid
 
-from .user_manager import UserManager
-from .chat_manager import ChatManager
-from ..ai.ai_manager import AIManager
-from ..config.ai_config import get_ai_config
-from ..database.connection import init_database
-from ..utils.auth import (
+from server.core.user_manager import UserManager
+from server.core.chat_manager import ChatManager
+from server.ai.ai_manager import AIManager
+from server.config.ai_config import get_ai_config
+from server.database.connection import init_database
+from server.utils.auth import (
     validate_username, validate_password, validate_chat_group_name,
     sanitize_message_content
 )
-from ..utils.common import ResponseHelper
-from ...shared.constants import (
+from server.utils.common import ResponseHelper
+from shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
     MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
 )
-from ...shared.messages import (
+from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
     ErrorMessage, UserInfoResponse, ListUsersResponse, ListChatsResponse,
     FileInfo, FileUploadResponse, FileDownloadResponse
 )
-from ...shared.exceptions import (
+from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
     UserNotFoundError, ChatGroupNotFoundError, PermissionDeniedError
 )
@@ -210,16 +210,23 @@ class ChatRoomServer:
             # 登录用户
             self.user_manager.login_user(user_info['id'], client_socket)
             
-            # 发送成功响应
-            self.send_login_response(
-                client_socket, True,
-                user_id=user_info['id'],
-                username=user_info['username']
-            )
-            
             # 自动进入公频聊天组
             public_chat_id = self.chat_manager.get_public_chat_id()
             self.user_manager.set_user_current_chat(user_info['id'], public_chat_id)
+
+            # 获取公频聊天组信息
+            public_chat_info = self.chat_manager.db.get_chat_group_by_id(public_chat_id)
+
+            # 发送成功响应（包含当前聊天组信息）
+            self.send_login_response(
+                client_socket, True,
+                user_id=user_info['id'],
+                username=user_info['username'],
+                current_chat_group={
+                    'id': public_chat_id,
+                    'name': public_chat_info['name']
+                }
+            )
             
         except AuthenticationError as e:
             self.send_login_response(client_socket, False, error_message=str(e))
@@ -528,13 +535,14 @@ class ChatRoomServer:
 
     def send_login_response(self, client_socket: socket.socket, success: bool,
                            user_id: int = None, username: str = None,
-                           error_message: str = None):
+                           error_message: str = None, current_chat_group: dict = None):
         """发送登录响应"""
         response = LoginResponse(
             success=success,
             user_id=user_id,
             username=username,
-            error_message=error_message
+            error_message=error_message,
+            current_chat_group=current_chat_group
         )
         self.send_message(client_socket, response)
 
