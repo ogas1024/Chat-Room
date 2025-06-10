@@ -433,3 +433,14 @@ class DatabaseManager:
             if row:
                 return dict(row)
             raise DatabaseError(f"文件ID {file_id} 不存在")
+
+    def update_file_message_id(self, file_id: int, message_id: int):
+        """更新文件元数据中的消息ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE files_metadata
+                SET message_id = ?
+                WHERE id = ?
+            ''', (message_id, file_id))
+            conn.commit()

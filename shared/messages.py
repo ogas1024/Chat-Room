@@ -177,6 +177,25 @@ class SystemMessage(BaseMessage):
 
 
 @dataclass
+class FileUploadResponse(BaseMessage):
+    """文件上传响应"""
+    message_type: str = MessageType.FILE_UPLOAD_RESPONSE
+    success: bool = False
+    message: str = ""
+    file_id: Optional[int] = None
+
+
+@dataclass
+class FileDownloadResponse(BaseMessage):
+    """文件下载响应"""
+    message_type: str = MessageType.FILE_DOWNLOAD_RESPONSE
+    success: bool = False
+    message: str = ""
+    filename: str = ""
+    file_size: int = 0
+
+
+@dataclass
 class ErrorMessage(BaseMessage):
     """错误消息"""
     message_type: str = MessageType.ERROR_MESSAGE
@@ -198,6 +217,8 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,
         MessageType.LIST_CHATS_RESPONSE: ListChatsResponse,
         MessageType.FILE_LIST_RESPONSE: FileListResponse,
+        MessageType.FILE_UPLOAD_RESPONSE: FileUploadResponse,
+        MessageType.FILE_DOWNLOAD_RESPONSE: FileDownloadResponse,
         MessageType.SYSTEM_MESSAGE: SystemMessage,
         MessageType.ERROR_MESSAGE: ErrorMessage,
     }

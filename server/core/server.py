@@ -7,6 +7,9 @@ import socket
 import threading
 import json
 import time
+import os
+import uuid
+import base64
 from typing import Dict, Any, Optional
 
 from server.core.user_manager import UserManager
@@ -18,12 +21,14 @@ from server.utils.auth import (
 )
 from shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
-    MessageType, ErrorCode
+    MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
+    MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
 )
 from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
-    ErrorMessage, UserInfoResponse, ListUsersResponse, ListChatsResponse
+    ErrorMessage, UserInfoResponse, ListUsersResponse, ListChatsResponse,
+    FileInfo, FileUploadResponse, FileDownloadResponse
 )
 from shared.exceptions import (
     ChatRoomException, AuthenticationError, UserAlreadyExistsError,
@@ -161,6 +166,12 @@ class ChatRoomServer:
                 self.handle_join_chat_request(client_socket, message)
             elif message.message_type == MessageType.ENTER_CHAT_REQUEST:
                 self.handle_enter_chat_request(client_socket, message)
+            elif message.message_type == MessageType.FILE_UPLOAD_REQUEST:
+                self.handle_file_upload_request(client_socket, message)
+            elif message.message_type == MessageType.FILE_DOWNLOAD_REQUEST:
+                self.handle_file_download_request(client_socket, message)
+            elif message.message_type == MessageType.FILE_LIST_REQUEST:
+                self.handle_file_list_request(client_socket, message)
             elif message.message_type == MessageType.LOGOUT_REQUEST:
                 self.handle_logout(client_socket)
             else:
@@ -495,3 +506,260 @@ class ChatRoomServer:
             error_message=error_message
         )
         self.send_message(client_socket, response)
+
+    # 文件传输处理方法
+    def handle_file_upload_request(self, client_socket: socket.socket, message: BaseMessage):
+        """处理文件上传请求"""
+        try:
+            # 验证用户登录
+            user_info = self.user_manager.get_user_by_socket(client_socket)
+            if not user_info:
+                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
+                return
+
+            # 获取请求数据
+            request_data = getattr(message, 'to_dict', lambda: {})()
+            chat_group_id = request_data.get('chat_group_id')
+            filename = request_data.get('filename', '')
+            file_size = request_data.get('file_size', 0)
+
+            if not chat_group_id:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组ID不能为空")
+                return
+
+            if not filename:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件名不能为空")
+                return
+
+            # 验证文件大小
+            if file_size > MAX_FILE_SIZE:
+                self.send_error(client_socket, ErrorCode.FILE_TOO_LARGE,
+                              f"文件过大，最大支持 {MAX_FILE_SIZE // (1024*1024)}MB")
+                return
+
+            # 验证文件扩展名
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext not in ALLOWED_FILE_EXTENSIONS:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND,
+                              f"不支持的文件类型: {file_ext}")
+                return
+
+            # 验证用户是否在聊天组中
+            if not self.chat_manager.db.is_user_in_chat_group(chat_group_id, user_info['user_id']):
+                self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您不在此聊天组中")
+                return
+
+            # 生成唯一的服务器文件名
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            server_filepath = os.path.join(FILES_STORAGE_PATH, str(chat_group_id), unique_filename)
+
+            # 确保目录存在
+            os.makedirs(os.path.dirname(server_filepath), exist_ok=True)
+
+            # 发送上传准备就绪响应
+            response = FileUploadResponse(
+                success=True,
+                message="准备接收文件"
+            )
+            self.send_message(client_socket, response)
+
+            # 接收文件数据
+            self._receive_file_data(client_socket, server_filepath, file_size,
+                                  filename, user_info['user_id'], chat_group_id)
+
+        except Exception as e:
+            print(f"文件上传请求处理错误: {e}")
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件上传失败")
+
+    def _receive_file_data(self, client_socket: socket.socket, server_filepath: str,
+                          file_size: int, original_filename: str, uploader_id: int,
+                          chat_group_id: int):
+        """接收文件数据"""
+        try:
+            received_size = 0
+            with open(server_filepath, 'wb') as f:
+                while received_size < file_size:
+                    # 计算本次接收的数据大小
+                    chunk_size = min(FILE_CHUNK_SIZE, file_size - received_size)
+
+                    # 接收数据
+                    data = client_socket.recv(chunk_size)
+                    if not data:
+                        break
+
+                    f.write(data)
+                    received_size += len(data)
+
+            # 验证文件大小
+            if received_size != file_size:
+                os.remove(server_filepath)
+                self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件传输不完整")
+                return
+
+            # 保存文件元数据到数据库
+            file_id = self.chat_manager.db.save_file_metadata(
+                original_filename, server_filepath, file_size,
+                uploader_id, chat_group_id
+            )
+
+            # 创建文件通知消息
+            uploader_username = self.user_manager.db.get_user_by_id(uploader_id)['username']
+            file_message_content = f"📎 {uploader_username} 上传了文件: {original_filename} ({file_size // 1024}KB)"
+
+            # 保存文件通知消息
+            message_id = self.chat_manager.db.save_message(
+                chat_group_id, uploader_id, file_message_content, 'file_notification'
+            )
+
+            # 更新文件元数据中的消息ID
+            self.chat_manager.db.update_file_message_id(file_id, message_id)
+
+            # 广播文件通知到聊天组
+            file_notification = ChatMessage(
+                message_type=MessageType.FILE_NOTIFICATION,
+                sender_id=uploader_id,
+                sender_username=uploader_username,
+                chat_group_id=chat_group_id,
+                content=file_message_content,
+                message_id=message_id
+            )
+            self.chat_manager.broadcast_message_to_group(file_notification)
+
+            # 发送上传成功响应
+            response = FileUploadResponse(
+                success=True,
+                message=f"文件 '{original_filename}' 上传成功",
+                file_id=file_id
+            )
+            self.send_message(client_socket, response)
+
+        except Exception as e:
+            print(f"文件数据接收错误: {e}")
+            # 清理失败的文件
+            if os.path.exists(server_filepath):
+                os.remove(server_filepath)
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件接收失败")
+
+    def handle_file_download_request(self, client_socket: socket.socket, message: BaseMessage):
+        """处理文件下载请求"""
+        try:
+            # 验证用户登录
+            user_info = self.user_manager.get_user_by_socket(client_socket)
+            if not user_info:
+                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
+                return
+
+            # 获取请求数据
+            request_data = getattr(message, 'to_dict', lambda: {})()
+            file_id = request_data.get('file_id')
+            save_path = request_data.get('save_path', '')
+
+            if not file_id:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件ID不能为空")
+                return
+
+            # 获取文件元数据
+            try:
+                file_metadata = self.chat_manager.db.get_file_metadata_by_id(file_id)
+            except Exception:
+                self.send_error(client_socket, ErrorCode.FILE_NOT_FOUND, "文件不存在")
+                return
+
+            # 验证用户是否在文件所属的聊天组中
+            if not self.chat_manager.db.is_user_in_chat_group(
+                file_metadata['chat_group_id'], user_info['user_id']
+            ):
+                self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您无权下载此文件")
+                return
+
+            # 检查文件是否存在
+            server_filepath = file_metadata['server_filepath']
+            if not os.path.exists(server_filepath):
+                self.send_error(client_socket, ErrorCode.FILE_NOT_FOUND, "服务器上的文件不存在")
+                return
+
+            # 发送下载开始响应
+            response = FileDownloadResponse(
+                success=True,
+                message="开始下载文件",
+                filename=file_metadata['original_filename'],
+                file_size=file_metadata['file_size']
+            )
+            self.send_message(client_socket, response)
+
+            # 发送文件数据
+            self._send_file_data(client_socket, server_filepath, file_metadata['original_filename'])
+
+        except Exception as e:
+            print(f"文件下载请求处理错误: {e}")
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件下载失败")
+
+    def _send_file_data(self, client_socket: socket.socket, server_filepath: str, filename: str):
+        """发送文件数据"""
+        try:
+            with open(server_filepath, 'rb') as f:
+                while True:
+                    data = f.read(FILE_CHUNK_SIZE)
+                    if not data:
+                        break
+                    client_socket.send(data)
+
+            # 发送下载完成响应
+            response = FileDownloadResponse(
+                success=True,
+                message=f"文件 '{filename}' 下载完成"
+            )
+            self.send_message(client_socket, response)
+
+        except Exception as e:
+            print(f"文件数据发送错误: {e}")
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件发送失败")
+
+    def handle_file_list_request(self, client_socket: socket.socket, message: BaseMessage):
+        """处理文件列表请求"""
+        try:
+            # 验证用户登录
+            user_info = self.user_manager.get_user_by_socket(client_socket)
+            if not user_info:
+                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
+                return
+
+            # 获取请求数据
+            request_data = getattr(message, 'to_dict', lambda: {})()
+            chat_group_id = request_data.get('chat_group_id')
+
+            if not chat_group_id:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组ID不能为空")
+                return
+
+            # 验证用户是否在聊天组中
+            if not self.chat_manager.db.is_user_in_chat_group(chat_group_id, user_info['user_id']):
+                self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您不在此聊天组中")
+                return
+
+            # 获取文件列表
+            files_data = self.chat_manager.db.get_chat_group_files(chat_group_id)
+
+            # 转换为FileInfo对象列表
+            files = [
+                FileInfo(
+                    file_id=file_data['id'],
+                    original_filename=file_data['original_filename'],
+                    file_size=file_data['file_size'],
+                    uploader_username=file_data['uploader_username'],
+                    upload_time=file_data['upload_timestamp']
+                )
+                for file_data in files_data
+            ]
+
+            # 发送文件列表响应
+            response = BaseMessage(
+                message_type=MessageType.FILE_LIST_RESPONSE,
+                success=True,
+                files=files
+            )
+            self.send_message(client_socket, response)
+
+        except Exception as e:
+            print(f"文件列表请求处理错误: {e}")
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取文件列表失败")
