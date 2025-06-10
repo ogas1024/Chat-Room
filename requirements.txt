@@ -12,8 +12,8 @@ asyncio-mqtt==0.13.0
 # 密码加密
 bcrypt==4.1.2
 
-# AI集成 - 智谱AI
-zhipuai==2.0.1
+# AI集成 - 智谱AI官方SDK
+zhipuai>=2.0.1
 
 # HTTP请求
 requests==2.31.0

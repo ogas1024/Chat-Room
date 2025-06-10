@@ -569,6 +569,8 @@ class CommandHandler:
             return False, "请指定AI命令: status, clear, help 或直接输入消息"
 
         ai_command = command.args[0].lower()
+        ai_message = " ".join(command.args[1:]) if len(command.args) > 1 else None
+        chat_group_id = self.chat_client.current_chat_group['group_id'] if self.chat_client.current_chat_group else None
 
         # 发送AI命令请求
         success, response = self.chat_client.send_ai_request(ai_command)

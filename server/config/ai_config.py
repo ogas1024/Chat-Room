@@ -15,10 +15,11 @@ class AIConfig:
         # 从环境变量获取API密钥
         self.api_key = os.getenv('ZHIPU_API_KEY')
         
-        # AI模型配置
-        self.model = "glm-4"
+        # AI模型配置 - 使用免费的GLM-4-Flash
+        self.model = "glm-4-flash"  # 免费模型，速度快，适合聊天场景
         self.max_tokens = 1024
         self.temperature = 0.7
+        self.top_p = 0.9
         
         # 上下文管理配置
         self.max_context_length = 10
@@ -47,6 +48,41 @@ class AIConfig:
         # 同时设置环境变量
         os.environ['ZHIPU_API_KEY'] = api_key
     
+    def set_model(self, model_name: str) -> bool:
+        """
+        设置AI模型
+
+        Args:
+            model_name: 模型名称
+
+        Returns:
+            设置是否成功
+        """
+        available_models = [
+            "glm-4-flash",      # 免费模型，速度快
+            "glm-4",            # 标准模型
+            "glm-4-plus",       # 增强模型
+            "glm-4-air",        # 轻量模型
+            "glm-4-airx",       # 轻量增强模型
+            "glm-4-long",       # 长文本模型
+        ]
+
+        if model_name in available_models:
+            self.model = model_name
+            return True
+        return False
+
+    def get_available_models(self) -> list:
+        """获取可用模型列表"""
+        return [
+            "glm-4-flash",      # 免费模型，速度快
+            "glm-4",            # 标准模型
+            "glm-4-plus",       # 增强模型
+            "glm-4-air",        # 轻量模型
+            "glm-4-airx",       # 轻量增强模型
+            "glm-4-long",       # 长文本模型
+        ]
+
     def to_dict(self) -> dict:
         """转换为字典"""
         return {
@@ -54,13 +90,15 @@ class AIConfig:
             "model": self.model,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
+            "top_p": self.top_p,
             "max_context_length": self.max_context_length,
             "context_timeout": self.context_timeout,
             "enable_group_chat": self.enable_group_chat,
             "enable_private_chat": self.enable_private_chat,
             "auto_reply": self.auto_reply,
             "trigger_keywords": self.trigger_keywords,
-            "require_at_mention": self.require_at_mention
+            "require_at_mention": self.require_at_mention,
+            "available_models": self.get_available_models()
         }
 
 
@@ -71,6 +109,28 @@ ai_config = AIConfig()
 def get_ai_config() -> AIConfig:
     """获取AI配置实例"""
     return ai_config
+
+
+def print_ai_setup_guide():
+    """打印AI设置指南"""
+    print("\n" + "="*60)
+    print("🤖 智谱AI设置指南")
+    print("="*60)
+    print("1. 访问智谱AI开放平台: https://bigmodel.cn/")
+    print("2. 注册账号并登录")
+    print("3. 在控制台创建API密钥")
+    print("4. 设置环境变量:")
+    print("   export ZHIPU_API_KEY='your_api_key_here'")
+    print("5. 或者在代码中直接设置:")
+    print("   ai_config.set_api_key('your_api_key_here')")
+    print("\n💡 推荐模型:")
+    print("   • glm-4-flash: 免费模型，速度快，适合聊天")
+    print("   • glm-4: 标准模型，平衡性能和质量")
+    print("   • glm-4-plus: 增强模型，质量更高")
+    print("   • glm-4-long: 长文本模型，支持更长上下文")
+    print("\n🔧 安装官方SDK (推荐):")
+    print("   pip install zhipuai")
+    print("="*60)
 
 
 def setup_ai_from_env():
