@@ -1,17 +1,70 @@
 """
 全局常量定义
 包含服务器配置、网络参数、消息类型等常量
+注意：网络和数据库配置现在从配置文件读取，这里保留默认值作为备用
 """
 
-# 网络配置
+# 默认网络配置（备用值）
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8888
 BUFFER_SIZE = 4096
 MAX_CONNECTIONS = 100
 
-# 数据库配置
+# 默认数据库配置（备用值）
 DATABASE_PATH = "server/data/chatroom.db"
 FILES_STORAGE_PATH = "server/data/files"
+
+
+def get_server_constants():
+    """
+    从配置文件获取服务器常量
+    如果配置文件不可用，返回默认值
+    """
+    try:
+        from server.config.server_config import get_server_config
+        config = get_server_config()
+        return {
+            'HOST': config.get_server_host(),
+            'PORT': config.get_server_port(),
+            'MAX_CONNECTIONS': config.get_max_connections(),
+            'DATABASE_PATH': config.get_database_path(),
+            'FILES_STORAGE_PATH': config.get_files_storage_path(),
+            'BUFFER_SIZE': config.config_manager.get("server.buffer_size", BUFFER_SIZE)
+        }
+    except Exception:
+        # 配置文件不可用时使用默认值
+        return {
+            'HOST': DEFAULT_HOST,
+            'PORT': DEFAULT_PORT,
+            'MAX_CONNECTIONS': MAX_CONNECTIONS,
+            'DATABASE_PATH': DATABASE_PATH,
+            'FILES_STORAGE_PATH': FILES_STORAGE_PATH,
+            'BUFFER_SIZE': BUFFER_SIZE
+        }
+
+
+def get_client_constants():
+    """
+    从配置文件获取客户端常量
+    如果配置文件不可用，返回默认值
+    """
+    try:
+        from client.config.client_config import get_client_config
+        config = get_client_config()
+        return {
+            'DEFAULT_HOST': config.get_default_host(),
+            'DEFAULT_PORT': config.get_default_port(),
+            'CONNECTION_TIMEOUT': config.get_connection_timeout(),
+            'BUFFER_SIZE': config.config_manager.get("performance.buffer_size", BUFFER_SIZE)
+        }
+    except Exception:
+        # 配置文件不可用时使用默认值
+        return {
+            'DEFAULT_HOST': DEFAULT_HOST,
+            'DEFAULT_PORT': DEFAULT_PORT,
+            'CONNECTION_TIMEOUT': 10,
+            'BUFFER_SIZE': BUFFER_SIZE
+        }
 
 # 消息类型常量
 class MessageType:

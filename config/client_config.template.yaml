@@ -1,0 +1,104 @@
+# Chat-Room 客户端配置文件模板
+# 请根据需要修改以下配置项
+
+# 连接配置
+connection:
+  default_host: localhost           # 默认服务器地址
+  default_port: 8888               # 默认服务器端口
+  connection_timeout: 10            # 连接超时时间（秒）
+  reconnect_attempts: 3             # 重连尝试次数
+  reconnect_delay: 5                # 重连延迟（秒）
+  heartbeat_interval: 30            # 心跳间隔（秒）
+  auto_reconnect: true              # 自动重连
+
+# 用户界面配置
+ui:
+  mode: tui                         # 界面模式（tui 或 cli）
+  theme: default                    # 主题名称
+  language: zh_CN                   # 语言设置
+  show_timestamps: true             # 显示时间戳
+  timestamp_format: "%H:%M:%S"      # 时间戳格式
+  max_chat_history: 1000            # 最大聊天历史记录
+  auto_scroll: true                 # 自动滚动
+  sound_enabled: false              # 启用声音
+  notifications_enabled: true       # 启用通知
+
+# TUI界面特定配置
+tui:
+  refresh_rate: 10                  # 刷新率（每秒）
+  input_history_size: 100           # 输入历史大小
+  show_user_list: true              # 显示用户列表
+  show_status_bar: true             # 显示状态栏
+  chat_area_height: 20              # 聊天区域高度
+  input_area_height: 3              # 输入区域高度
+  sidebar_width: 20                 # 侧边栏宽度
+  color_scheme:                     # 颜色方案
+    background: default
+    text: white
+    accent: cyan
+    error: red
+    success: green
+    warning: yellow
+
+# 用户偏好设置
+user:
+  remember_credentials: false       # 记住登录凭据
+  auto_login: false                 # 自动登录
+  default_username: ""              # 默认用户名
+  save_chat_history: true           # 保存聊天历史
+  chat_history_path: data/chat_history  # 聊天历史路径
+  download_path: downloads          # 下载路径
+  auto_accept_files: false          # 自动接受文件
+  max_download_size: 104857600      # 最大下载大小（字节，100MB）
+
+# 聊天行为配置
+chat:
+  auto_join_public: true            # 自动加入公共聊天
+  show_join_leave_messages: true    # 显示加入/离开消息
+  show_typing_indicators: true      # 显示输入指示器
+  message_send_key: Enter           # 消息发送键（Enter 或 Ctrl+Enter）
+  enable_emoji: true                # 启用表情符号
+  enable_markdown: false            # 启用Markdown
+  max_message_length: 2048          # 最大消息长度
+  typing_timeout: 3                 # 输入超时时间（秒）
+
+# 文件传输配置
+file_transfer:
+  auto_create_download_dir: true    # 自动创建下载目录
+  show_transfer_progress: true      # 显示传输进度
+  parallel_downloads: 3             # 并行下载数
+  chunk_size: 8192                  # 传输块大小
+  resume_downloads: true            # 断点续传
+  verify_checksums: true            # 验证校验和
+
+# 命令配置
+commands:
+  enable_autocomplete: true         # 启用自动完成
+  show_command_help: true           # 显示命令帮助
+  command_history_size: 50          # 命令历史大小
+  case_sensitive: false             # 大小写敏感
+  custom_aliases: {}                # 自定义别名
+
+# 日志配置
+logging:
+  level: INFO                       # 日志级别
+  file_enabled: false               # 启用文件日志
+  file_path: logs/client.log        # 日志文件路径
+  file_max_size: 5242880            # 日志文件最大大小（字节，5MB）
+  file_backup_count: 3              # 日志文件备份数量
+  console_enabled: true             # 启用控制台日志
+
+# 性能配置
+performance:
+  buffer_size: 4096                 # 缓冲区大小
+  message_queue_size: 1000          # 消息队列大小
+  ui_update_interval: 100           # UI更新间隔（毫秒）
+  enable_compression: true          # 启用压缩
+  lazy_loading: true                # 延迟加载
+
+# 调试配置
+debug:
+  enabled: false                    # 启用调试模式
+  show_raw_messages: false          # 显示原始消息
+  log_network_traffic: false       # 记录网络流量
+  performance_monitoring: false    # 性能监控

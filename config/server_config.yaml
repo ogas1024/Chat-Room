@@ -1,0 +1,95 @@
+server:
+  host: localhost
+  port: 8888
+  max_connections: 100
+  buffer_size: 4096
+  heartbeat_interval: 30
+  connection_timeout: 300
+database:
+  path: server/data/chatroom.db
+  backup_enabled: true
+  backup_interval: 3600
+  backup_count: 5
+  auto_vacuum: true
+file_storage:
+  path: server/data/files
+  max_file_size: 104857600
+  allowed_extensions:
+  - .txt
+  - .doc
+  - .docx
+  - .pdf
+  - .jpg
+  - .jpeg
+  - .png
+  - .gif
+  - .mp3
+  - .mp4
+  - .avi
+  - .zip
+  - .rar
+  - .py
+  - .js
+  - .html
+  - .css
+  chunk_size: 8192
+  auto_cleanup: true
+  cleanup_interval: 86400
+ai:
+  enabled: true
+  api_key: ''
+  model: glm-4-flash
+  max_tokens: 1024
+  temperature: 0.7
+  top_p: 0.9
+  max_context_length: 10
+  context_timeout: 3600
+  enable_group_chat: true
+  enable_private_chat: true
+  auto_reply: true
+  trigger_keywords:
+  - ai
+  - 人工智能
+  - 助手
+  - 机器人
+  - 智能
+  - 问答
+  require_at_mention: false
+  available_models:
+  - glm-4-flash
+  - glm-4
+  - glm-4-plus
+  - glm-4-air
+  - glm-4-airx
+  - glm-4-long
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file_enabled: true
+  file_path: logs/server.log
+  file_max_size: 10485760
+  file_backup_count: 5
+  console_enabled: true
+security:
+  password_min_length: 6
+  password_hash_rounds: 12
+  session_timeout: 86400
+  max_login_attempts: 5
+  login_cooldown: 300
+  enable_rate_limiting: true
+  rate_limit_requests: 100
+  rate_limit_window: 60
+chat:
+  default_public_chat: public
+  max_message_length: 2048
+  message_history_limit: 1000
+  auto_create_public_chat: true
+  allow_private_chat: true
+  max_chat_members: 100
+performance:
+  enable_compression: true
+  compression_level: 6
+  enable_caching: true
+  cache_size: 1000
+  cache_ttl: 300
+  worker_threads: 4

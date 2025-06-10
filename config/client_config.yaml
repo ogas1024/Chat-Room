@@ -1,0 +1,82 @@
+connection:
+  default_host: localhost
+  default_port: 8888
+  connection_timeout: 10
+  reconnect_attempts: 3
+  reconnect_delay: 5
+  heartbeat_interval: 30
+  auto_reconnect: true
+ui:
+  mode: tui
+  theme: default
+  language: zh_CN
+  show_timestamps: true
+  timestamp_format: '%H:%M:%S'
+  max_chat_history: 1000
+  auto_scroll: true
+  sound_enabled: false
+  notifications_enabled: true
+tui:
+  refresh_rate: 10
+  input_history_size: 100
+  show_user_list: true
+  show_status_bar: true
+  chat_area_height: 20
+  input_area_height: 3
+  sidebar_width: 20
+  color_scheme:
+    background: default
+    text: white
+    accent: cyan
+    error: red
+    success: green
+    warning: yellow
+user:
+  remember_credentials: false
+  auto_login: false
+  default_username: ''
+  save_chat_history: true
+  chat_history_path: data/chat_history
+  download_path: downloads
+  auto_accept_files: false
+  max_download_size: 104857600
+chat:
+  auto_join_public: true
+  show_join_leave_messages: true
+  show_typing_indicators: true
+  message_send_key: Enter
+  enable_emoji: true
+  enable_markdown: false
+  max_message_length: 2048
+  typing_timeout: 3
+file_transfer:
+  auto_create_download_dir: true
+  show_transfer_progress: true
+  parallel_downloads: 3
+  chunk_size: 8192
+  resume_downloads: true
+  verify_checksums: true
+commands:
+  enable_autocomplete: true
+  show_command_help: true
+  command_history_size: 50
+  case_sensitive: false
+  custom_aliases: {}
+logging:
+  level: INFO
+  file_enabled: false
+  file_path: logs/client.log
+  file_max_size: 5242880
+  file_backup_count: 3
+  console_enabled: true
+performance:
+  buffer_size: 4096
+  message_queue_size: 1000
+  ui_update_interval: 100
+  enable_compression: true
+  lazy_loading: true
+debug:
+  enabled: false
+  show_raw_messages: false
+  log_network_traffic: false
+  performance_monitoring: false

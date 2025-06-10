@@ -37,11 +37,22 @@ class ZhipuClient:
         初始化智谱AI客户端
 
         Args:
-            api_key: 智谱AI API密钥，如果为None则从环境变量获取
+            api_key: 智谱AI API密钥，如果为None则从配置文件获取
         """
-        self.api_key = api_key or os.getenv('ZHIPU_API_KEY')
+        if api_key:
+            self.api_key = api_key
+        else:
+            # 从配置文件获取API密钥
+            try:
+                from server.config.server_config import get_server_config
+                server_config = get_server_config()
+                self.api_key = server_config.get_ai_api_key()
+            except Exception:
+                # 备用方案：从环境变量获取
+                self.api_key = os.getenv('ZHIPU_API_KEY', '')
+
         if not self.api_key:
-            raise ValueError("智谱AI API密钥未设置，请设置环境变量 ZHIPU_API_KEY 或传入api_key参数")
+            raise ValueError("智谱AI API密钥未设置，请在配置文件 config/server_config.yaml 中设置 ai.api_key 或传入api_key参数")
 
         # 模型配置 - 使用GLM-4-Flash免费模型
         self.model = "glm-4-flash"  # 使用免费的GLM-4-Flash模型

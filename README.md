@@ -85,7 +85,31 @@ Chat-Room/
    pip install -r requirements.txt
    ```
 
-3. **启动服务器**
+3. **配置系统**
+
+   #### 方式一：使用配置工具（推荐）
+   ```bash
+   # 交互式配置设置
+   python tools/config_setup.py
+   ```
+
+   #### 方式二：手动配置
+   ```bash
+   # 复制配置模板
+   cp config/server_config.template.yaml config/server_config.yaml
+   cp config/client_config.template.yaml config/client_config.yaml
+
+   # 编辑配置文件设置AI API密钥等
+   nano config/server_config.yaml
+   ```
+
+   #### 环境变量迁移（如果需要）
+   ```bash
+   # 如果您之前使用环境变量配置，可以使用迁移工具
+   python tools/migrate_config.py
+   ```
+
+4. **启动服务器**
    ```bash
    # 使用默认配置启动
    python -m server.main
@@ -202,14 +226,21 @@ bob> /recv_files -l
 bob> /recv_files -n document.pdf
 ```
 
-#### AI对话（待实现）
+#### AI对话
 ```bash
-# 私聊AI
-alice> /enter_chat AI助手
-alice> 你好，请帮我解释一下Python的装饰器
+# 配置AI功能（在config/server_config.yaml中设置API密钥）
+ai:
+  enabled: true
+  api_key: "your-zhipu-ai-api-key"
+  model: glm-4-flash
 
-# 群聊中@AI
-alice> @AI 请解释一下这段代码的作用
+# 群聊中@AI或使用关键词
+alice> @AI 你好，请帮我解释一下Python的装饰器
+alice> AI能帮我写一个函数吗？
+
+# 私聊AI（所有消息都会得到回复）
+alice> /enter_chat private_with_ai
+alice> 你好，这是私聊消息
 ```
 
 ## 🔧 开发说明
@@ -387,6 +418,8 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ## 📚 更多文档
 
 - **设计文档**: [docs/Design-v03.md](docs/Design-v03.md) - 详细的系统设计说明
+- **配置指南**: [docs/Configuration_Guide.md](docs/Configuration_Guide.md) - 配置文件管理系统使用指南
+- **AI集成指南**: [docs/AI_Integration_Guide.md](docs/AI_Integration_Guide.md) - AI功能配置和使用指南
 - **API文档**: [docs/API.md](docs/API.md) - 网络协议和API接口文档（待创建）
 - **开发指南**: [docs/Development.md](docs/Development.md) - 详细的开发指南（待创建）
 - **部署指南**: [docs/Deployment.md](docs/Deployment.md) - 生产环境部署说明（待创建）
@@ -413,7 +446,8 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - [ ] TUI界面优化和交互改进
 
 ### 计划功能 📋
-- [ ] AI集成模块（智谱AI）
+- [x] AI集成模块（智谱AI GLM-4-Flash）
+- [x] 统一配置文件管理系统
 - [ ] 聊天历史查看和搜索
 - [ ] 用户权限管理
 - [ ] 消息加密和安全性
