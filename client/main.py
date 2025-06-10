@@ -194,28 +194,45 @@ class SimpleChatClient:
 def main():
     """主函数"""
     import argparse
-    
+
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='聊天室客户端')
     parser.add_argument(
-        '--host', 
+        '--host',
         default=DEFAULT_HOST,
         help=f'服务器地址 (默认: {DEFAULT_HOST})'
     )
     parser.add_argument(
-        '--port', 
+        '--port',
         type=int,
         default=DEFAULT_PORT,
         help=f'服务器端口 (默认: {DEFAULT_PORT})'
     )
-    
+    parser.add_argument(
+        '--mode',
+        choices=['tui', 'simple'],
+        default='tui',
+        help='客户端模式: tui(图形界面) 或 simple(简单命令行)'
+    )
+
     args = parser.parse_args()
-    
+
     try:
-        # 创建并启动客户端
-        client = SimpleChatClient(args.host, args.port)
-        client.start()
-        
+        if args.mode == 'tui':
+            # 使用TUI界面
+            try:
+                from client.ui.app import run_chat_app
+                run_chat_app(args.host, args.port)
+            except ImportError as e:
+                print(f"TUI模式需要textual库: {e}")
+                print("请运行: pip install textual")
+                print("或使用简单模式: python -m client.main --mode simple")
+                sys.exit(1)
+        else:
+            # 使用简单命令行界面
+            client = SimpleChatClient(args.host, args.port)
+            client.start()
+
     except KeyboardInterrupt:
         print("\n程序被用户中断")
     except Exception as e:
