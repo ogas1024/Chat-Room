@@ -7,7 +7,7 @@ import os
 from typing import Optional
 
 from .models import DatabaseManager
-from shared.constants import DATABASE_PATH
+from ..shared.constants import DATABASE_PATH
 
 
 class DatabaseConnection:

@@ -9,7 +9,7 @@ import threading
 from typing import Optional, Dict, Any, List
 from .zhipu_client import ZhipuClient, AIMessage
 from .context_manager import ContextManager
-from shared.constants import AI_USERNAME, AI_USER_ID
+from ..shared.constants import AI_USERNAME, AI_USER_ID
 
 
 class AIManager:

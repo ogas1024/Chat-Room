@@ -8,17 +8,18 @@ import sys
 import os
 
 # 确保项目根目录在Python路径中
-project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+from pathlib import Path
+project_root = Path(__file__).parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 def demo_command_parser():
     """演示命令解析器功能"""
     print("🎯 演示命令解析器功能")
     print("=" * 40)
     
-    from client.network.client import ChatClient
-    from client.commands.parser import CommandHandler
+    from src.client.network.client import ChatClient
+    from src.client.commands.parser import CommandHandler
     
     # 创建客户端和命令处理器
     client = ChatClient()
@@ -56,7 +57,7 @@ def demo_chat_client_methods():
     print("🎯 演示ChatClient新方法")
     print("=" * 40)
     
-    from client.network.client import ChatClient
+    from src.client.network.client import ChatClient
     
     client = ChatClient()
     
@@ -87,7 +88,7 @@ def demo_message_types():
     print("🎯 演示新的消息类型")
     print("=" * 40)
     
-    from shared.constants import MessageType
+    from src.shared.constants import MessageType
     
     # 新增的消息类型
     new_message_types = [
@@ -156,7 +157,7 @@ def demo_file_operations():
     print("  ✅ 文件类型检查 (支持常见格式)")
     
     print("\n📋 支持的文件类型:")
-    from shared.constants import ALLOWED_FILE_EXTENSIONS
+    from src.shared.constants import ALLOWED_FILE_EXTENSIONS
     print(f"  {', '.join(ALLOWED_FILE_EXTENSIONS)}")
     
     print()

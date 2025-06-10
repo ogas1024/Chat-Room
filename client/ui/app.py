@@ -25,11 +25,11 @@ from rich.console import Console
 from datetime import datetime
 from typing import Optional
 
-from client.network.client import ChatClient
-from client.commands.parser import CommandHandler
-from client.ui.themes import get_theme_manager, apply_theme_to_console
-from client.ui.components import EnhancedChatLog, StatusPanel, EnhancedInput, LoadingIndicator
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT, DISPLAY_TIME_FORMAT
+from .network.client import ChatClient
+from .commands.parser import CommandHandler
+from .ui.themes import get_theme_manager, apply_theme_to_console
+from .ui.components import EnhancedChatLog, StatusPanel, EnhancedInput, LoadingIndicator
+from ...shared.constants import DEFAULT_HOST, DEFAULT_PORT, DISPLAY_TIME_FORMAT
 
 
 class ChatRoomApp(App):
@@ -192,7 +192,7 @@ class ChatRoomApp(App):
         if not self.chat_client:
             return
         
-        from shared.constants import MessageType
+        from ...shared.constants import MessageType
         
         # 设置各种消息的处理器
         self.chat_client.network_client.set_message_handler(

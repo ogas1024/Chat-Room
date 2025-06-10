@@ -8,8 +8,8 @@ import signal
 import argparse
 from typing import Optional
 
-from server.core.server import ChatRoomServer
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from .core.server import ChatRoomServer
+from ..shared.constants import DEFAULT_HOST, DEFAULT_PORT
 
 
 def signal_handler(signum, frame):

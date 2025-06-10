@@ -4,7 +4,7 @@
 """
 
 from typing import Dict, Callable, Any
-from client.network.client import ChatClient
+from .network.client import ChatClient
 
 
 class CommandHandler:

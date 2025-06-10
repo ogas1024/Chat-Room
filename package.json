@@ -1,0 +1,73 @@
+{
+  "name": "chat-room",
+  "version": "1.0.0",
+  "description": "一个基于Python的实时聊天室系统，采用客户端-服务器架构，支持多用户聊天、文件传输、AI集成等功能",
+  "main": "main.py",
+  "scripts": {
+    "start": "python main.py",
+    "server": "python main.py server",
+    "client": "python main.py client",
+    "demo": "python main.py demo",
+    "test": "python main.py test",
+    "config": "python main.py config",
+    "install": "pip install -r requirements.txt",
+    "lint": "flake8 src test",
+    "format": "black src test",
+    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ogas1024/Chat-Room.git"
+  },
+  "keywords": [
+    "chat",
+    "chatroom",
+    "socket",
+    "python",
+    "tui",
+    "textual",
+    "ai",
+    "real-time",
+    "messaging"
+  ],
+  "author": "Zhanhua Shu <2970143166zsbd@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.8"
+  },
+  "dependencies": {
+    "textual": "^0.47.1",
+    "asyncio-mqtt": "^0.13.0",
+    "bcrypt": "^4.1.2",
+    "zhipuai": ">=2.0.1",
+    "requests": "^2.31.0",
+    "python-dateutil": "^2.8.2",
+    "loguru": "^0.7.2",
+    "pyyaml": "^6.0.1",
+    "jsonschema": "^4.17.3"
+  },
+  "devDependencies": {
+    "pytest": "^7.4.3",
+    "pytest-asyncio": "^0.21.1",
+    "black": "^23.11.0",
+    "flake8": "^6.1.0"
+  },
+  "directories": {
+    "src": "src",
+    "test": "test",
+    "docs": "docs",
+    "demo": "demo",
+    "config": "config"
+  },
+  "files": [
+    "src/",
+    "test/",
+    "docs/",
+    "demo/",
+    "config/",
+    "main.py",
+    "requirements.txt",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -3,12 +3,44 @@
 解析用户输入的斜杠命令并执行相应操作
 """
 
-import re
 import shlex
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
+from functools import wraps
 
-from shared.constants import COMMAND_PREFIX
+from ...shared.constants import COMMAND_PREFIX
+
+
+def require_login(func: Callable) -> Callable:
+    """装饰器：要求用户登录"""
+    @wraps(func)
+    def wrapper(self, command):
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+        return func(self, command)
+    return wrapper
+
+
+def require_chat_group(func: Callable) -> Callable:
+    """装饰器：要求用户在聊天组中"""
+    @wraps(func)
+    def wrapper(self, command):
+        if not self.chat_client.current_chat_group:
+            return False, "请先进入聊天组"
+        return func(self, command)
+    return wrapper
+
+
+def require_args(min_args: int = 1, error_msg: str = "请提供必要的参数"):
+    """装饰器：要求最少参数数量"""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(self, command):
+            if len(command.args) < min_args:
+                return False, error_msg
+            return func(self, command)
+        return wrapper
+    return decorator
 
 
 @dataclass
@@ -287,11 +319,9 @@ class CommandHandler:
         # 这里应该触发注册界面
         return True, "请输入用户名和密码进行注册"
     
+    @require_login
     def handle_info(self, command: Command) -> tuple[bool, str]:
         """处理信息查询命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
         # 获取用户信息
         success, message, user_info = self.chat_client.get_user_info()
         if not success:
@@ -317,11 +347,9 @@ class CommandHandler:
 
         return True, info_text
     
+    @require_login
     def handle_list(self, command: Command) -> tuple[bool, str]:
         """处理列表命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
         # 检查参数
         if not command.options:
             return False, "请指定列表类型: -u(用户) -s(当前聊天组用户) -c(已加入聊天组) -g(所有群聊) -f(文件)"
@@ -423,13 +451,10 @@ class CommandHandler:
         else:
             return False, f"未知选项: {option}。支持的选项: -u, -s, -c, -g, -f"
     
+    @require_login
+    @require_args(1, "请指定聊天组名称")
     def handle_create_chat(self, command: Command) -> tuple[bool, str]:
         """处理创建聊天组命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
-        if not command.args:
-            return False, "请指定聊天组名称"
 
         group_name = command.args[0]
         member_usernames = command.args[1:] if len(command.args) > 1 else []
@@ -569,8 +594,6 @@ class CommandHandler:
             return False, "请指定AI命令: status, clear, help 或直接输入消息"
 
         ai_command = command.args[0].lower()
-        ai_message = " ".join(command.args[1:]) if len(command.args) > 1 else None
-        chat_group_id = self.chat_client.current_chat_group['group_id'] if self.chat_client.current_chat_group else None
 
         # 发送AI命令请求
         success, response = self.chat_client.send_ai_request(ai_command)

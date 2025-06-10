@@ -6,34 +6,35 @@
 import socket
 import threading
 import json
-import time
 import os
 import uuid
-import base64
-from typing import Dict, Any, Optional
 
-from server.core.user_manager import UserManager
-from server.core.chat_manager import ChatManager
-from server.ai.ai_manager import AIManager
-from server.config.ai_config import get_ai_config
-from server.database.connection import init_database
-from server.utils.auth import (
+from .user_manager import UserManager
+from .chat_manager import ChatManager
+from ..ai.ai_manager import AIManager
+from ..config.ai_config import get_ai_config
+from ..database.connection import init_database
+from ..utils.auth import (
     validate_username, validate_password, validate_chat_group_name,
     sanitize_message_content
 )
-from shared.constants import (
+# 暂时注释掉，将在后续重构中使用
+# from ..utils.common import (
+#     require_login, handle_exceptions, ResponseHelper, ValidationHelper, log_operation
+# )
+from ...shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
     MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
 )
-from shared.messages import (
+from ...shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
     ErrorMessage, UserInfoResponse, ListUsersResponse, ListChatsResponse,
     FileInfo, FileUploadResponse, FileDownloadResponse
 )
-from shared.exceptions import (
-    ChatRoomException, AuthenticationError, UserAlreadyExistsError,
+from ...shared.exceptions import (
+    AuthenticationError, UserAlreadyExistsError,
     UserNotFoundError, ChatGroupNotFoundError, PermissionDeniedError
 )
 
@@ -466,7 +467,7 @@ class ChatRoomServer:
                 return
 
             # 进入聊天组
-            group_info = self.chat_manager.enter_chat_group(chat_name, user_info['user_id'])
+            self.chat_manager.enter_chat_group(chat_name, user_info['user_id'])
 
             # 发送成功响应
             response = SystemMessage(content=f"已进入聊天组 '{chat_name}'")
@@ -678,7 +679,6 @@ class ChatRoomServer:
             # 获取请求数据
             request_data = getattr(message, 'to_dict', lambda: {})()
             file_id = request_data.get('file_id')
-            save_path = request_data.get('save_path', '')
 
             if not file_id:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件ID不能为空")
@@ -832,7 +832,6 @@ class ChatRoomServer:
                     ai_response = "抱歉，我现在无法回复您的消息。"
 
             # 发送AI响应
-            from shared.messages import BaseMessage
             response = BaseMessage(
                 message_type=MessageType.AI_CHAT_RESPONSE,
                 success=True,

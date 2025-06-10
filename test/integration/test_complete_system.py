@@ -10,8 +10,9 @@ import time
 from pathlib import Path
 
 # 确保项目根目录在Python路径中
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+project_root = Path(__file__).parent.parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 
 def test_configuration_system():
@@ -20,7 +21,7 @@ def test_configuration_system():
     
     try:
         # 测试服务器配置
-        from server.config.server_config import get_server_config
+        from src.server.config.server_config import get_server_config
         server_config = get_server_config()
         
         print(f"  ✅ 服务器配置加载成功")
@@ -29,7 +30,7 @@ def test_configuration_system():
         print(f"     - 配置文件: {server_config.config_file}")
         
         # 测试客户端配置
-        from client.config.client_config import get_client_config
+        from src.client.config.client_config import get_client_config
         client_config = get_client_config()
         
         print(f"  ✅ 客户端配置加载成功")
@@ -49,7 +50,7 @@ def test_ai_integration():
     print("\n🤖 测试AI集成...")
     
     try:
-        from server.config.ai_config import get_ai_config
+        from src.server.config.ai_config import get_ai_config
         ai_config = get_ai_config()
         
         print(f"  ✅ AI配置加载成功")
@@ -60,7 +61,7 @@ def test_ai_integration():
         
         # 测试智谱AI客户端
         if ai_config.get_api_key():
-            from server.ai.zhipu_client import ZhipuClient
+            from src.server.ai.zhipu_client import ZhipuClient
             try:
                 client = ZhipuClient()
                 print(f"  ✅ 智谱AI客户端初始化成功")
@@ -83,7 +84,7 @@ def test_database_connection():
     print("\n💾 测试数据库连接...")
     
     try:
-        from server.database.connection import get_connection
+        from src.server.database.connection import get_connection
         
         conn = get_connection()
         cursor = conn.cursor()
@@ -109,8 +110,8 @@ def test_server_startup():
     print("\n🚀 测试服务器启动...")
     
     try:
-        from server.core.server import ChatRoomServer
-        from server.config.server_config import get_server_config
+        from src.server.core.server import ChatRoomServer
+        from src.server.config.server_config import get_server_config
         
         config = get_server_config()
         
@@ -135,8 +136,8 @@ def test_client_initialization():
     print("\n📱 测试客户端初始化...")
     
     try:
-        from client.network.client import ChatClient
-        from client.config.client_config import get_client_config
+        from src.client.network.client import ChatClient
+        from src.client.config.client_config import get_client_config
         
         config = get_client_config()
         
@@ -159,8 +160,8 @@ def test_command_system():
     print("\n⌨️ 测试命令系统...")
     
     try:
-        from client.commands.command_handler import CommandHandler
-        from client.network.client import ChatClient
+        from src.client.commands.command_handler import CommandHandler
+        from src.client.network.client import ChatClient
         
         client = ChatClient()
         handler = CommandHandler(client)
@@ -201,7 +202,7 @@ def test_message_protocol():
     print("\n📨 测试消息协议...")
     
     try:
-        from shared.protocol import MessageType, create_message, parse_message
+        from src.shared.protocol import MessageType, create_message, parse_message
         
         # 测试消息创建和解析
         test_message = create_message(MessageType.LOGIN_REQUEST, {
@@ -228,7 +229,7 @@ def test_file_operations():
     print("\n📁 测试文件操作...")
     
     try:
-        from server.config.server_config import get_server_config
+        from src.server.config.server_config import get_server_config
         
         config = get_server_config()
         
@@ -260,8 +261,8 @@ def test_configuration_tools():
     try:
         # 测试配置模板存在
         templates = [
-            "config/server_config.template.yaml",
-            "config/client_config.template.yaml"
+            "config/templates/server_config.template.yaml",
+            "config/templates/client_config.template.yaml"
         ]
         
         for template in templates:
@@ -273,8 +274,8 @@ def test_configuration_tools():
         
         # 测试配置工具脚本存在
         tools = [
-            "tools/config_setup.py",
-            "tools/migrate_config.py"
+            "config/examples/config_setup.py",
+            "config/examples/migrate_config.py"
         ]
         
         for tool in tools:

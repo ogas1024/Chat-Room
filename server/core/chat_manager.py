@@ -7,10 +7,10 @@ import json
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from server.database.connection import get_db
-from shared.constants import ChatType, DEFAULT_PUBLIC_CHAT, MessageType
-from shared.exceptions import ChatGroupNotFoundError, PermissionDeniedError
-from shared.messages import ChatMessage, ChatGroupInfo, UserInfo
+from .database.connection import get_db
+from ..shared.constants import ChatType, DEFAULT_PUBLIC_CHAT, MessageType
+from ..shared.exceptions import ChatGroupNotFoundError, PermissionDeniedError
+from ..shared.messages import ChatMessage, ChatGroupInfo, UserInfo
 
 
 class ChatManager:

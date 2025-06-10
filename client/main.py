@@ -4,13 +4,34 @@
 """
 
 import sys
-import threading
-import time
-from typing import Optional
 
-from client.network.client import ChatClient
-from client.commands.parser import CommandHandler
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from .network.client import ChatClient
+from .commands.parser import CommandHandler
+from ..shared.constants import DEFAULT_HOST, DEFAULT_PORT
+
+
+def get_user_input(prompt: str, required: bool = True) -> str:
+    """获取用户输入并验证"""
+    try:
+        value = input(prompt).strip()
+        if required and not value:
+            print(f"❌ {prompt.replace(': ', '')}不能为空")
+            return ""
+        return value
+    except (KeyboardInterrupt, EOFError):
+        print(f"\n{prompt.replace(': ', '')}输入已取消")
+        return ""
+
+
+def validate_connection_state(current_state: str, required_state: str) -> bool:
+    """验证连接状态"""
+    if current_state != required_state:
+        if required_state == "connected":
+            print("❌ 请先连接到服务器")
+        elif required_state == "logged_in":
+            print("❌ 请先登录")
+        return False
+    return True
 
 
 class SimpleChatClient:
@@ -109,78 +130,70 @@ class SimpleChatClient:
     
     def handle_login_command(self):
         """处理登录命令"""
-        if self.current_state != "connected":
-            print("❌ 请先连接到服务器")
+        if not validate_connection_state(self.current_state, "connected"):
             return
-        
+
+        username = get_user_input("用户名: ")
+        if not username:
+            return
+
+        password = get_user_input("密码: ")
+        if not password:
+            return
+
         try:
-            username = input("用户名: ").strip()
-            if not username:
-                print("❌ 用户名不能为空")
-                return
-            
-            password = input("密码: ").strip()
-            if not password:
-                print("❌ 密码不能为空")
-                return
-            
             print("正在登录...")
             success, message = self.chat_client.login(username, password)
-            
+
             if success:
                 print(f"✅ {message}")
                 self.current_state = "logged_in"
                 print(f"欢迎, {username}! 您已进入公频聊天组")
             else:
                 print(f"❌ {message}")
-                
-        except KeyboardInterrupt:
-            print("\n登录已取消")
+
         except Exception as e:
             print(f"❌ 登录时出错: {e}")
     
     def handle_signin_command(self):
         """处理注册命令"""
-        if self.current_state != "connected":
-            print("❌ 请先连接到服务器")
+        if not validate_connection_state(self.current_state, "connected"):
             return
-        
+
+        username = get_user_input("用户名: ")
+        if not username:
+            return
+
+        password = get_user_input("密码: ")
+        if not password:
+            return
+
+        confirm_password = get_user_input("确认密码: ")
+        if not confirm_password:
+            return
+
+        if password != confirm_password:
+            print("❌ 两次输入的密码不一致")
+            return
+
         try:
-            username = input("用户名: ").strip()
-            if not username:
-                print("❌ 用户名不能为空")
-                return
-            
-            password = input("密码: ").strip()
-            if not password:
-                print("❌ 密码不能为空")
-                return
-            
-            confirm_password = input("确认密码: ").strip()
-            if password != confirm_password:
-                print("❌ 两次输入的密码不一致")
-                return
-            
             print("正在注册...")
             success, message = self.chat_client.register(username, password)
-            
+
             if success:
                 print(f"✅ {message}")
                 print("请使用 /login 命令登录")
             else:
                 print(f"❌ {message}")
-                
-        except KeyboardInterrupt:
-            print("\n注册已取消")
+
         except Exception as e:
             print(f"❌ 注册时出错: {e}")
     
     def handle_message(self, message: str):
         """处理普通消息"""
-        if self.current_state != "logged_in":
-            print("❌ 请先登录")
+        if not validate_connection_state(self.current_state, "logged_in"):
             return
-        
+
         # 检查是否在聊天组中
         if not self.chat_client.current_chat_group:
             print("❌ 请先进入聊天组")
@@ -232,7 +245,7 @@ def main():
         if args.mode == 'tui':
             # 使用TUI界面
             try:
-                from client.ui.app import run_chat_app
+                from .ui.app import run_chat_app
                 run_chat_app(args.host, args.port)
             except ImportError as e:
                 print(f"TUI模式需要textual库: {e}")

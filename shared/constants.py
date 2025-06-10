@@ -1,46 +1,18 @@
 """
 全局常量定义
-包含服务器配置、网络参数、消息类型等常量
-注意：网络和数据库配置现在从配置文件读取，这里保留默认值作为备用
+包含网络参数、消息类型、错误代码等常量
+注意：具体配置值从配置文件读取，这里只保留必要的默认值
 """
 
-# 默认网络配置（备用值）
+# 网络配置默认值（仅作备用）
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8888
 BUFFER_SIZE = 4096
 MAX_CONNECTIONS = 100
 
-# 默认数据库配置（备用值）
+# 数据库配置默认值（仅作备用）
 DATABASE_PATH = "server/data/chatroom.db"
 FILES_STORAGE_PATH = "server/data/files"
-
-
-def get_server_constants():
-    """
-    从配置文件获取服务器常量
-    如果配置文件不可用，返回默认值
-    """
-    try:
-        from server.config.server_config import get_server_config
-        config = get_server_config()
-        return {
-            'HOST': config.get_server_host(),
-            'PORT': config.get_server_port(),
-            'MAX_CONNECTIONS': config.get_max_connections(),
-            'DATABASE_PATH': config.get_database_path(),
-            'FILES_STORAGE_PATH': config.get_files_storage_path(),
-            'BUFFER_SIZE': config.config_manager.get("server.buffer_size", BUFFER_SIZE)
-        }
-    except Exception:
-        # 配置文件不可用时使用默认值
-        return {
-            'HOST': DEFAULT_HOST,
-            'PORT': DEFAULT_PORT,
-            'MAX_CONNECTIONS': MAX_CONNECTIONS,
-            'DATABASE_PATH': DATABASE_PATH,
-            'FILES_STORAGE_PATH': FILES_STORAGE_PATH,
-            'BUFFER_SIZE': BUFFER_SIZE
-        }
 
 
 def get_client_constants():
@@ -49,7 +21,7 @@ def get_client_constants():
     如果配置文件不可用，返回默认值
     """
     try:
-        from client.config.client_config import get_client_config
+        from ..client.config.client_config import get_client_config
         config = get_client_config()
         return {
             'DEFAULT_HOST': config.get_default_host(),
@@ -128,8 +100,8 @@ class ChatType:
     PRIVATE_CHAT = 1  # 私聊
 
 # 文件传输常量
-FILE_CHUNK_SIZE = 8192  # 文件传输块大小
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 最大文件大小 100MB
+FILE_CHUNK_SIZE = 8192  # 文件传输块大小（8KB）
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 最大文件大小（100MB）
 ALLOWED_FILE_EXTENSIONS = [
     '.txt', '.doc', '.docx', '.pdf', '.jpg', '.jpeg', '.png', '.gif',
     '.mp3', '.mp4', '.avi', '.zip', '.rar', '.py', '.js', '.html', '.css'

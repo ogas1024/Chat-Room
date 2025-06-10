@@ -7,8 +7,15 @@ Chat-Room 演示脚本
 import threading
 import time
 import sys
-from server.core.server import ChatRoomServer
-from client.network.client import ChatClient
+from pathlib import Path
+
+# 确保项目根目录在Python路径中
+project_root = Path(__file__).parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from src.server.core.server import ChatRoomServer
+from src.client.network.client import ChatClient
 
 
 def demo_server():

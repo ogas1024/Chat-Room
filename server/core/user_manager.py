@@ -7,13 +7,13 @@ import socket
 from typing import Dict, List, Optional, Set
 from datetime import datetime
 
-from server.database.connection import get_db
-from shared.constants import UserStatus, AI_USER_ID, AI_USERNAME
-from shared.exceptions import (
+from .database.connection import get_db
+from ..shared.constants import UserStatus, AI_USER_ID, AI_USERNAME
+from ..shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError, 
     UserNotFoundError, DatabaseError
 )
-from shared.messages import UserInfo
+from ..shared.messages import UserInfo
 
 
 class UserManager:

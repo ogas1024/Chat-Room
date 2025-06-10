@@ -10,8 +10,8 @@ from datetime import datetime
 from typing import List, Optional, Tuple, Dict, Any
 from contextlib import contextmanager
 
-from shared.constants import UserStatus, ChatType, DEFAULT_PUBLIC_CHAT
-from shared.exceptions import DatabaseError, UserNotFoundError, ChatGroupNotFoundError
+from ..shared.constants import UserStatus, ChatType, DEFAULT_PUBLIC_CHAT
+from ..shared.exceptions import DatabaseError, UserNotFoundError, ChatGroupNotFoundError
 
 
 class DatabaseManager:
