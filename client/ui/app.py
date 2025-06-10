@@ -258,13 +258,25 @@ class ChatRoomApp(App):
         if not self.is_logged_in:
             self.add_error_message("❌ 请先登录")
             return
-        
+
         if not self.chat_client:
             self.add_error_message("❌ 未连接到服务器")
             return
-        
-        # TODO: 发送消息到当前聊天组
-        self.add_system_message(f"发送消息: {message} (功能待实现)")
+
+        # 检查是否在聊天组中
+        if not self.chat_client.current_chat_group:
+            self.add_error_message("❌ 请先进入聊天组")
+            return
+
+        # 发送消息到当前聊天组
+        group_id = self.chat_client.current_chat_group['id']
+        success = self.chat_client.send_chat_message(message, group_id)
+
+        if success:
+            # 消息发送成功，显示在界面上（服务器会回传消息）
+            self.add_chat_message(self.current_user, message, is_self=True)
+        else:
+            self.add_error_message("❌ 消息发送失败")
     
     def start_login_process(self):
         """开始登录流程"""
@@ -296,7 +308,8 @@ class ChatRoomApp(App):
             self.login_step = 1
             self.add_system_message("请输入密码:")
             self.message_input.placeholder = "密码"
-            # TODO: 设置密码掩码
+            # 设置密码掩码
+            self.message_input.password = True
         elif self.login_step == 1:
             # 输入密码
             password = user_input
@@ -358,6 +371,8 @@ class ChatRoomApp(App):
         self.login_step = 0
         self.temp_username = ""
         self.message_input.placeholder = "输入消息或命令..."
+        # 清除密码掩码
+        self.message_input.password = False
 
     def show_help(self):
         """显示帮助信息"""
@@ -452,10 +467,25 @@ class ChatRoomApp(App):
         # 添加分隔线
         self.status_list.append(ListItem(Label("─" * 20)))
 
-        # TODO: 添加在线用户列表
-        if self.is_logged_in:
+        # 添加在线用户列表
+        if self.is_logged_in and self.chat_client:
             self.status_list.append(ListItem(Label("在线用户:")))
-            # 这里可以添加实际的在线用户列表
+
+            # 获取当前聊天组用户列表
+            if self.chat_client.current_chat_group:
+                success, _, users = self.chat_client.list_users("current_chat")
+                if success and users:
+                    for user in users[:5]:  # 最多显示5个用户
+                        status_icon = "🟢" if user['is_online'] else "🔴"
+                        user_text = f"{status_icon} {user['username']}"
+                        self.status_list.append(ListItem(Label(user_text)))
+
+                    if len(users) > 5:
+                        self.status_list.append(ListItem(Label(f"... 还有 {len(users) - 5} 个用户")))
+                else:
+                    self.status_list.append(ListItem(Label("  暂无其他用户")))
+            else:
+                self.status_list.append(ListItem(Label("  请先进入聊天组")))
 
     # 网络消息处理器
     def handle_chat_message(self, message):
@@ -478,7 +508,12 @@ class ChatRoomApp(App):
 
     def handle_user_status_update(self, message):
         """处理用户状态更新"""
-        # TODO: 更新用户在线状态显示
+        # 显示用户状态变化消息
+        if hasattr(message, 'username') and hasattr(message, 'is_online'):
+            status = "上线" if message.is_online else "下线"
+            self.add_system_message(f"用户 {message.username} 已{status}")
+
+        # 更新用户在线状态显示
         self.update_status_area()
 
     # 应用生命周期

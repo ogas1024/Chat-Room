@@ -181,8 +181,19 @@ class SimpleChatClient:
             print("❌ 请先登录")
             return
         
-        # TODO: 发送消息到当前聊天组
-        print(f"发送消息: {message} (功能待实现)")
+        # 检查是否在聊天组中
+        if not self.chat_client.current_chat_group:
+            print("❌ 请先进入聊天组")
+            return
+
+        # 发送消息到当前聊天组
+        group_id = self.chat_client.current_chat_group['id']
+        success = self.chat_client.send_chat_message(message, group_id)
+
+        if success:
+            print(f"✅ 消息已发送: {message}")
+        else:
+            print("❌ 消息发送失败")
     
     def cleanup(self):
         """清理资源"""

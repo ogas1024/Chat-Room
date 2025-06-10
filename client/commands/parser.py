@@ -278,69 +278,280 @@ class CommandHandler:
         """处理信息查询命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        # TODO: 实现用户信息查询
-        return True, "用户信息查询功能待实现"
+
+        # 获取用户信息
+        success, message, user_info = self.chat_client.get_user_info()
+        if not success:
+            return False, message
+
+        # 格式化用户信息
+        info_text = f"""
+用户信息:
+  用户ID: {user_info['user_id']}
+  用户名: {user_info['username']}
+  在线状态: {'在线' if user_info['is_online'] else '离线'}
+
+聊天组统计:
+  已加入聊天组: {user_info['joined_chats_count']}
+  私聊数量: {user_info['private_chats_count']}
+  群聊数量: {user_info['group_chats_count']}
+
+系统统计:
+  总用户数: {user_info['total_users_count']}
+  在线用户数: {user_info['online_users_count']}
+  总聊天组数: {user_info['total_chats_count']}
+        """.strip()
+
+        return True, info_text
     
     def handle_list(self, command: Command) -> tuple[bool, str]:
         """处理列表命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        # TODO: 实现各种列表查询
-        return True, "列表查询功能待实现"
+
+        # 检查参数
+        if not command.options:
+            return False, "请指定列表类型: -u(用户) -s(当前聊天组用户) -c(已加入聊天组) -g(所有群聊) -f(文件)"
+
+        option = command.options[0]
+
+        if option == "-u":
+            # 显示所有用户
+            success, message, users = self.chat_client.list_users("all")
+            if not success:
+                return False, message
+
+            if not users:
+                return True, "暂无用户"
+
+            user_list = "所有用户列表:\n"
+            for user in users:
+                status = "在线" if user['is_online'] else "离线"
+                user_list += f"  {user['username']} (ID: {user['user_id']}) - {status}\n"
+
+            return True, user_list.strip()
+
+        elif option == "-s":
+            # 显示当前聊天组用户
+            if not self.chat_client.current_chat_group:
+                return False, "请先进入聊天组"
+
+            success, message, users = self.chat_client.list_users("current_chat")
+            if not success:
+                return False, message
+
+            if not users:
+                return True, "当前聊天组暂无其他用户"
+
+            chat_name = self.chat_client.current_chat_group['name']
+            user_list = f"聊天组 '{chat_name}' 成员列表:\n"
+            for user in users:
+                status = "在线" if user['is_online'] else "离线"
+                user_list += f"  {user['username']} - {status}\n"
+
+            return True, user_list.strip()
+
+        elif option == "-c":
+            # 显示已加入的聊天组
+            success, message, chats = self.chat_client.list_chats("joined")
+            if not success:
+                return False, message
+
+            if not chats:
+                return True, "您还没有加入任何聊天组"
+
+            chat_list = "已加入的聊天组:\n"
+            for chat in chats:
+                chat_type = "私聊" if chat['is_private_chat'] else "群聊"
+                chat_list += f"  {chat['group_name']} (ID: {chat['group_id']}) - {chat_type} - {chat['member_count']}人\n"
+
+            return True, chat_list.strip()
+
+        elif option == "-g":
+            # 显示所有群聊
+            success, message, chats = self.chat_client.list_chats("all")
+            if not success:
+                return False, message
+
+            if not chats:
+                return True, "暂无公开群聊"
+
+            # 过滤出群聊（非私聊）
+            group_chats = [chat for chat in chats if not chat['is_private_chat']]
+            if not group_chats:
+                return True, "暂无公开群聊"
+
+            chat_list = "所有群聊列表:\n"
+            for chat in group_chats:
+                chat_list += f"  {chat['group_name']} (ID: {chat['group_id']}) - {chat['member_count']}人\n"
+
+            return True, chat_list.strip()
+
+        elif option == "-f":
+            # 显示当前聊天组文件
+            if not self.chat_client.current_chat_group:
+                return False, "请先进入聊天组"
+
+            success, message, files = self.chat_client.list_files()
+            if not success:
+                return False, message
+
+            if not files:
+                return True, "当前聊天组暂无文件"
+
+            chat_name = self.chat_client.current_chat_group['name']
+            file_list = f"聊天组 '{chat_name}' 文件列表:\n"
+            for file_info in files:
+                size_mb = file_info['file_size'] / (1024 * 1024)
+                file_list += f"  {file_info['original_filename']} ({size_mb:.2f}MB) - 上传者: {file_info['uploader_username']}\n"
+
+            return True, file_list.strip()
+
+        else:
+            return False, f"未知选项: {option}。支持的选项: -u, -s, -c, -g, -f"
     
     def handle_create_chat(self, command: Command) -> tuple[bool, str]:
         """处理创建聊天组命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        
+
         if not command.args:
             return False, "请指定聊天组名称"
-        
-        # TODO: 实现创建聊天组
-        return True, f"创建聊天组 '{command.args[0]}' 功能待实现"
+
+        group_name = command.args[0]
+        member_usernames = command.args[1:] if len(command.args) > 1 else []
+
+        # 创建聊天组
+        success, message = self.chat_client.create_chat_group(group_name, member_usernames)
+        if success:
+            if member_usernames:
+                return True, f"{message}，已邀请用户: {', '.join(member_usernames)}"
+            else:
+                return True, message
+        else:
+            return False, message
     
     def handle_enter_chat(self, command: Command) -> tuple[bool, str]:
         """处理进入聊天组命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        
+
         if not command.args:
             return False, "请指定聊天组名称"
-        
-        # TODO: 实现进入聊天组
-        return True, f"进入聊天组 '{command.args[0]}' 功能待实现"
+
+        group_name = command.args[0]
+
+        # 进入聊天组
+        success, message = self.chat_client.enter_chat_group(group_name)
+        return success, message
     
     def handle_join_chat(self, command: Command) -> tuple[bool, str]:
         """处理加入聊天组命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        
+
         if not command.args:
             return False, "请指定聊天组名称"
-        
-        # TODO: 实现加入聊天组
-        return True, f"加入聊天组 '{command.args[0]}' 功能待实现"
+
+        group_name = command.args[0]
+
+        # 加入聊天组
+        success, message = self.chat_client.join_chat_group(group_name)
+        return success, message
     
     def handle_send_files(self, command: Command) -> tuple[bool, str]:
         """处理发送文件命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        
+
         if not command.args:
             return False, "请指定文件路径"
-        
-        # TODO: 实现文件发送
-        return True, f"发送文件功能待实现"
+
+        # 发送多个文件
+        results = []
+        for file_path in command.args:
+            success, message = self.chat_client.send_file(file_path)
+            if success:
+                results.append(f"✅ {message}")
+            else:
+                results.append(f"❌ {file_path}: {message}")
+
+        return True, "\n".join(results)
     
     def handle_recv_files(self, command: Command) -> tuple[bool, str]:
         """处理接收文件命令"""
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
-        
-        # TODO: 实现文件接收
-        return True, "接收文件功能待实现"
+
+        if not command.options:
+            return False, "请指定操作: -l(列出文件) -n <文件ID>(下载文件) -a(下载所有)"
+
+        option = command.options[0]
+
+        if option == "-l":
+            # 列出可下载的文件
+            if not self.chat_client.current_chat_group:
+                return False, "请先进入聊天组"
+
+            success, message, files = self.chat_client.list_files()
+            if not success:
+                return False, message
+
+            if not files:
+                return True, "当前聊天组暂无文件"
+
+            file_list = "可下载文件列表:\n"
+            for file_info in files:
+                size_mb = file_info['file_size'] / (1024 * 1024)
+                file_list += f"  ID: {file_info['file_id']} - {file_info['original_filename']} ({size_mb:.2f}MB)\n"
+                file_list += f"    上传者: {file_info['uploader_username']} - 时间: {file_info['upload_time']}\n"
+
+            return True, file_list.strip()
+
+        elif option == "-n":
+            # 下载指定文件
+            if len(command.args) < 1:
+                return False, "请指定文件ID"
+
+            try:
+                file_id = int(command.args[0])
+            except ValueError:
+                return False, "文件ID必须是数字"
+
+            save_path = command.args[1] if len(command.args) > 1 else None
+            success, message = self.chat_client.download_file(file_id, save_path)
+            return success, message
+
+        elif option == "-a":
+            # 下载所有文件
+            if not self.chat_client.current_chat_group:
+                return False, "请先进入聊天组"
+
+            success, message, files = self.chat_client.list_files()
+            if not success:
+                return False, message
+
+            if not files:
+                return True, "当前聊天组暂无文件"
+
+            results = []
+            for file_info in files:
+                success, msg = self.chat_client.download_file(file_info['file_id'])
+                if success:
+                    results.append(f"✅ {file_info['original_filename']}: {msg}")
+                else:
+                    results.append(f"❌ {file_info['original_filename']}: {msg}")
+
+            return True, "\n".join(results)
+
+        else:
+            return False, f"未知选项: {option}。支持的选项: -l, -n, -a"
     
     def handle_exit(self, command: Command) -> tuple[bool, str]:
         """处理退出命令"""
-        # TODO: 实现退出逻辑
-        return True, "正在退出..."
+        # 断开连接
+        if self.chat_client.is_connected():
+            self.chat_client.disconnect()
+
+        # 这里可以添加其他清理逻辑
+        return True, "已断开连接，正在退出..."

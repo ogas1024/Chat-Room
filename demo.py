@@ -62,8 +62,24 @@ def demo_client(username: str, password: str):
         print(f"💬 {username}: 开始聊天...")
         time.sleep(1)
         
-        # TODO: 发送消息功能
-        print(f"📝 {username}: 发送消息功能待实现")
+        # 发送消息功能
+        if client.current_chat_group:
+            test_messages = [
+                f"大家好，我是 {username}！",
+                "这是一条测试消息",
+                "聊天室功能测试中..."
+            ]
+
+            for msg in test_messages:
+                group_id = client.current_chat_group['id']
+                success = client.send_chat_message(msg, group_id)
+                if success:
+                    print(f"📝 {username}: 发送消息 - {msg}")
+                else:
+                    print(f"❌ {username}: 消息发送失败")
+                time.sleep(2)  # 间隔发送
+        else:
+            print(f"❌ {username}: 未进入聊天组，无法发送消息")
         
         # 保持连接一段时间
         time.sleep(5)

@@ -7,7 +7,7 @@ import socket
 import threading
 import json
 import time
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, List
 
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE
 from shared.messages import BaseMessage, parse_message, ErrorMessage
@@ -342,3 +342,398 @@ class ChatClient:
     def is_logged_in(self) -> bool:
         """检查是否已登录"""
         return self.current_user is not None
+
+    def get_user_info(self) -> tuple[bool, str, Optional[Dict[str, Any]]]:
+        """获取用户信息"""
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录", None
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器", None
+
+        # 发送用户信息请求
+        request = BaseMessage(message_type=MessageType.USER_INFO_REQUEST)
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败", None
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.USER_INFO_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.USER_INFO_RESPONSE:
+                user_info = {
+                    'user_id': response.user_info.user_id if response.user_info else None,
+                    'username': response.user_info.username if response.user_info else None,
+                    'is_online': response.user_info.is_online if response.user_info else None,
+                    'joined_chats_count': response.joined_chats_count,
+                    'private_chats_count': response.private_chats_count,
+                    'group_chats_count': response.group_chats_count,
+                    'total_users_count': response.total_users_count,
+                    'online_users_count': response.online_users_count,
+                    'total_chats_count': response.total_chats_count
+                }
+                return True, "获取用户信息成功", user_info
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message, None
+
+        return False, "服务器无响应", None
+
+    def list_users(self, list_type: str = "all") -> tuple[bool, str, Optional[List[Dict[str, Any]]]]:
+        """获取用户列表
+
+        Args:
+            list_type: 列表类型 ("all", "current_chat")
+        """
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录", None
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器", None
+
+        # 发送用户列表请求
+        request = BaseMessage(
+            message_type=MessageType.LIST_USERS_REQUEST,
+            list_type=list_type,
+            chat_group_id=self.current_chat_group['id'] if self.current_chat_group else None
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败", None
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.LIST_USERS_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.LIST_USERS_RESPONSE:
+                users = []
+                for user in response.users:
+                    users.append({
+                        'user_id': user.user_id,
+                        'username': user.username,
+                        'is_online': user.is_online
+                    })
+                return True, "获取用户列表成功", users
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message, None
+
+        return False, "服务器无响应", None
+
+    def list_chats(self, list_type: str = "joined") -> tuple[bool, str, Optional[List[Dict[str, Any]]]]:
+        """获取聊天组列表
+
+        Args:
+            list_type: 列表类型 ("joined", "all")
+        """
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录", None
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器", None
+
+        # 发送聊天组列表请求
+        request = BaseMessage(
+            message_type=MessageType.LIST_CHATS_REQUEST,
+            list_type=list_type
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败", None
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.LIST_CHATS_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.LIST_CHATS_RESPONSE:
+                chats = []
+                for chat in response.chats:
+                    chats.append({
+                        'group_id': chat.group_id,
+                        'group_name': chat.group_name,
+                        'is_private_chat': chat.is_private_chat,
+                        'member_count': chat.member_count,
+                        'created_at': chat.created_at
+                    })
+                return True, "获取聊天组列表成功", chats
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message, None
+
+        return False, "服务器无响应", None
+
+    def create_chat_group(self, group_name: str, member_usernames: List[str] = None) -> tuple[bool, str]:
+        """创建聊天组
+
+        Args:
+            group_name: 聊天组名称
+            member_usernames: 初始成员用户名列表
+        """
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送创建聊天组请求
+        request = BaseMessage(
+            message_type=MessageType.CREATE_CHAT_REQUEST,
+            group_name=group_name,
+            member_usernames=member_usernames or []
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.CREATE_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.CREATE_CHAT_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, f"聊天组 '{group_name}' 创建成功"
+                else:
+                    return False, response.error_message or "创建聊天组失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
+
+    def join_chat_group(self, group_name: str) -> tuple[bool, str]:
+        """加入聊天组"""
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送加入聊天组请求
+        request = BaseMessage(
+            message_type=MessageType.JOIN_CHAT_REQUEST,
+            group_name=group_name
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.JOIN_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.JOIN_CHAT_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, f"成功加入聊天组 '{group_name}'"
+                else:
+                    return False, response.error_message or "加入聊天组失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
+
+    def enter_chat_group(self, group_name: str) -> tuple[bool, str]:
+        """进入聊天组（切换当前聊天组）"""
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送进入聊天组请求
+        request = BaseMessage(
+            message_type=MessageType.ENTER_CHAT_REQUEST,
+            group_name=group_name
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.ENTER_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.ENTER_CHAT_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    # 更新当前聊天组信息
+                    if hasattr(response, 'chat_group'):
+                        self.current_chat_group = {
+                            'id': response.chat_group.group_id,
+                            'name': response.chat_group.group_name,
+                            'is_private_chat': response.chat_group.is_private_chat
+                        }
+                    return True, f"已进入聊天组 '{group_name}'"
+                else:
+                    return False, response.error_message or "进入聊天组失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
+
+    def list_files(self, chat_group_id: int = None) -> tuple[bool, str, Optional[List[Dict[str, Any]]]]:
+        """获取聊天组文件列表"""
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录", None
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器", None
+
+        # 使用当前聊天组ID或指定的ID
+        group_id = chat_group_id or (self.current_chat_group['id'] if self.current_chat_group else None)
+        if not group_id:
+            return False, "请先进入聊天组", None
+
+        # 发送文件列表请求
+        request = BaseMessage(
+            message_type=MessageType.FILE_LIST_REQUEST,
+            chat_group_id=group_id
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败", None
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.FILE_LIST_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.FILE_LIST_RESPONSE:
+                files = []
+                for file_info in response.files:
+                    files.append({
+                        'file_id': file_info.file_id,
+                        'original_filename': file_info.original_filename,
+                        'file_size': file_info.file_size,
+                        'uploader_username': file_info.uploader_username,
+                        'upload_time': file_info.upload_time
+                    })
+                return True, "获取文件列表成功", files
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message, None
+
+        return False, "服务器无响应", None
+
+    def send_file(self, file_path: str) -> tuple[bool, str]:
+        """发送文件到当前聊天组"""
+        import os
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType, MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        if not self.current_chat_group:
+            return False, "请先进入聊天组"
+
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return False, f"文件不存在: {file_path}"
+
+        # 检查文件大小
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_FILE_SIZE:
+            return False, f"文件过大，最大支持 {MAX_FILE_SIZE // (1024*1024)}MB"
+
+        # 检查文件扩展名
+        file_ext = os.path.splitext(file_path)[1].lower()
+        if file_ext not in ALLOWED_FILE_EXTENSIONS:
+            return False, f"不支持的文件类型: {file_ext}"
+
+        filename = os.path.basename(file_path)
+
+        # 发送文件上传请求
+        request = BaseMessage(
+            message_type=MessageType.FILE_UPLOAD_REQUEST,
+            chat_group_id=self.current_chat_group['id'],
+            filename=filename,
+            file_size=file_size
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.FILE_UPLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.FILE_UPLOAD_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, f"文件 '{filename}' 上传成功"
+                else:
+                    return False, response.error_message or "文件上传失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
+
+    def download_file(self, file_id: int, save_path: str = None) -> tuple[bool, str]:
+        """下载文件"""
+        from shared.messages import BaseMessage
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送文件下载请求
+        request = BaseMessage(
+            message_type=MessageType.FILE_DOWNLOAD_REQUEST,
+            file_id=file_id,
+            save_path=save_path
+        )
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=30.0,  # 文件下载可能需要更长时间
+            message_types=[MessageType.FILE_DOWNLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, f"文件下载成功: {response.file_path if hasattr(response, 'file_path') else save_path}"
+                else:
+                    return False, response.error_message or "文件下载失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
