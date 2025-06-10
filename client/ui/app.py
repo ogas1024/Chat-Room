@@ -27,6 +27,8 @@ from typing import Optional
 
 from client.network.client import ChatClient
 from client.commands.parser import CommandHandler
+from client.ui.themes import get_theme_manager, apply_theme_to_console
+from client.ui.components import EnhancedChatLog, StatusPanel, EnhancedInput, LoadingIndicator
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT, DISPLAY_TIME_FORMAT
 
 
