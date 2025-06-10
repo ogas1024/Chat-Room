@@ -144,32 +144,51 @@ class NetworkClient:
         """检查是否已连接"""
         return self.connected and self.socket is not None
     
-    def wait_for_response(self, timeout: float = 5.0) -> Optional[BaseMessage]:
+    def wait_for_response(self, timeout: float = 5.0, message_types: list = None) -> Optional[BaseMessage]:
         """等待服务器响应（阻塞式）"""
         if not self.connected:
             return None
-        
+
         start_time = time.time()
         response = None
-        
+
         def response_handler(message):
             nonlocal response
-            response = message
-        
-        # 临时设置响应处理器
-        old_handler = self.default_message_handler
-        self.default_message_handler = response_handler
-        
+            # 如果指定了消息类型，只接受这些类型的消息
+            if message_types is None or message.message_type in message_types:
+                response = message
+
+        # 保存原有的处理器
+        old_handlers = {}
+        old_default_handler = self.default_message_handler
+
+        # 如果指定了消息类型，临时替换这些类型的处理器
+        if message_types:
+            for msg_type in message_types:
+                if msg_type in self.message_handlers:
+                    old_handlers[msg_type] = self.message_handlers[msg_type]
+                self.message_handlers[msg_type] = response_handler
+        else:
+            # 否则替换默认处理器
+            self.default_message_handler = response_handler
+
         try:
             # 等待响应
             while time.time() - start_time < timeout and response is None:
                 time.sleep(0.1)
-            
+
             return response
-            
+
         finally:
             # 恢复原来的处理器
-            self.default_message_handler = old_handler
+            if message_types:
+                for msg_type in message_types:
+                    if msg_type in old_handlers:
+                        self.message_handlers[msg_type] = old_handlers[msg_type]
+                    else:
+                        self.message_handlers.pop(msg_type, None)
+            else:
+                self.default_message_handler = old_default_handler
 
 
 class ChatClient:
@@ -218,49 +237,63 @@ class ChatClient:
     def login(self, username: str, password: str) -> tuple[bool, str]:
         """用户登录"""
         from shared.messages import LoginRequest
-        
+        from shared.constants import MessageType
+
         if not self.network_client.is_connected():
             return False, "未连接到服务器"
-        
+
         # 发送登录请求
         login_request = LoginRequest(username=username, password=password)
         if not self.network_client.send_message(login_request):
             return False, "发送登录请求失败"
-        
-        # 等待响应
-        response = self.network_client.wait_for_response()
-        if response and hasattr(response, 'success'):
-            if response.success:
+
+        # 等待登录响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.LOGIN_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if hasattr(response, 'success') and response.success:
                 self.current_user = {
                     'id': response.user_id,
                     'username': response.username
                 }
                 return True, "登录成功"
-            else:
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+            elif hasattr(response, 'success'):
                 return False, response.error_message or "登录失败"
-        
+
         return False, "服务器无响应"
     
     def register(self, username: str, password: str) -> tuple[bool, str]:
         """用户注册"""
         from shared.messages import RegisterRequest
-        
+        from shared.constants import MessageType
+
         if not self.network_client.is_connected():
             return False, "未连接到服务器"
-        
+
         # 发送注册请求
         register_request = RegisterRequest(username=username, password=password)
         if not self.network_client.send_message(register_request):
             return False, "发送注册请求失败"
-        
-        # 等待响应
-        response = self.network_client.wait_for_response()
-        if response and hasattr(response, 'success'):
-            if response.success:
+
+        # 等待注册响应
+        response = self.network_client.wait_for_response(
+            timeout=10.0,
+            message_types=[MessageType.REGISTER_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if hasattr(response, 'success') and response.success:
                 return True, "注册成功"
-            else:
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+            elif hasattr(response, 'success'):
                 return False, response.error_message or "注册失败"
-        
+
         return False, "服务器无响应"
     
     def send_chat_message(self, content: str, group_id: int) -> bool:
