@@ -1,0 +1,381 @@
+# Chat-Room项目 .gitignore 文件
+# 基于Python项目的最佳实践
+
+# ==================== Python相关 ====================
+# 字节码文件
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# 分发/打包
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  通常这些文件是由python脚本从模板自动生成的
+#  在运行PyInstaller之前。它们也可以手动创建
+#  用于控制PyInstaller的行为
+*.manifest
+*.spec
+
+# 单元测试/覆盖率报告
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# 翻译
+*.mo
+*.pot
+
+# Django相关（如果将来使用）
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask相关（如果将来使用）
+instance/
+.webassets-cache
+
+# Scrapy相关（如果将来使用）
+.scrapy
+
+# Sphinx文档
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   建议在项目根目录中包含.python-version文件
+#   https://github.com/pyenv/pyenv#basic-github-checkout
+.python-version
+
+# pipenv
+#   根据官方建议，Pipfile.lock应该包含在版本控制中
+#   但是，如果您有一个通用的Pipfile.lock，建议忽略它
+#   取消注释下一行以忽略Pipfile.lock
+# Pipfile.lock
+
+# poetry
+#   类似于Pipfile.lock，通常建议包含poetry.lock在版本控制中
+#   这是特别推荐的用于库包（https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control）
+#   但对于项目，您可能希望忽略它
+# poetry.lock
+
+# pdm
+#   类似于Pipfile.lock，通常建议包含pdm.lock在版本控制中
+#   pdm stores project-wide configurations in .pdm.toml，但建议不要包含它
+#   在版本控制中
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery相关
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath解析文件
+*.sage.py
+
+# 环境变量
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder项目设置
+.spyderproject
+.spyproject
+
+# Rope项目设置
+.ropeproject
+
+# mkdocs文档
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre类型检查器
+.pyre/
+
+# pytype静态类型分析器
+.pytype/
+
+# Cython调试符号
+cython_debug/
+
+# ==================== IDE和编辑器 ====================
+# PyCharm
+#  JetBrains特定模板在https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  并且可以添加到全局gitignore或合并到此文件中。对于更核心的项目特定
+#  忽略文件，请参阅https://help.github.com/articles/ignoring-files/了解更多关于忽略文件的信息。
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ==================== 操作系统相关 ====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS缩略图
+._*
+
+# macOS目录属性
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# macOS网络存储
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Windows转储文件
+*.stackdump
+
+# Windows文件夹配置文件
+[Dd]esktop.ini
+
+# Windows回收站
+$RECYCLE.BIN/
+
+# Windows安装程序文件
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows快捷方式
+*.lnk
+
+# Linux
+*~
+
+# 临时文件，可能由编辑器创建
+.fuse_hidden*
+
+# KDE目录首选项
+.directory
+
+# Linux垃圾文件夹，可能出现在任何分区或设备上
+.Trash-*
+
+# .nfs文件是当打开的文件被删除但仍在访问时由某些Linux发行版创建的
+.nfs*
+
+# ==================== 项目特定 ====================
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+chat_room.db
+users.db
+
+# 日志文件
+*.log
+logs/
+log/
+
+# 配置文件（包含敏感信息）
+config.ini
+config.yaml
+config.json
+.env.local
+.env.production
+.env.development
+
+# 用户上传的文件
+uploads/
+media/
+static/uploads/
+
+# 临时文件和缓存
+tmp/
+temp/
+cache/
+.cache/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+*.orig
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 证书和密钥文件
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# AI模型文件（如果有）
+*.model
+*.pkl
+*.pickle
+models/
+
+# 聊天记录和用户数据（敏感信息）
+chat_history/
+user_data/
+conversations/
+
+# 测试输出
+test_output/
+test_results/
+
+# 性能分析文件
+*.prof
+*.profile
+
+# ==================== 开发工具 ====================
+# 代码覆盖率
+.coverage
+htmlcov/
+
+# 性能测试
+.benchmarks/
+
+# 安全扫描结果
+.bandit
+.safety
+
+# 代码质量报告
+.flake8
+.pylint.d/
+
+# 类型检查
+.mypy_cache/
+
+# 文档生成
+docs/_build/
+docs/build/
+
+# ==================== 部署相关 ====================
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+
+# 部署脚本生成的文件
+deploy/
+deployment/
+
+# ==================== 其他 ====================
+# 编辑器临时文件
+*.tmp
+*.temp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 网络文件
+*.url
+*.webloc
+
+# 归档文件
+*.tar
+*.gz
+*.bz2
+*.xz
+
+# 注意：以下文件通常应该包含在版本控制中
+# requirements.txt
+# setup.py
+# pyproject.toml
+# README.md
+# LICENSE
+# .github/

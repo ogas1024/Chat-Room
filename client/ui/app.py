@@ -3,10 +3,18 @@ Textual TUI应用主类
 实现聊天室的图形化命令行界面
 """
 
+import sys
+import os
+
+# 添加项目根目录到Python路径
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import (
-    Header, Footer, Input, RichLog, Static, 
+    Header, Footer, Input, RichLog, Static,
     Button, Label, ListView, ListItem
 )
 from textual.reactive import reactive
@@ -74,12 +82,12 @@ class ChatRoomApp(App):
     
     .system_message {
         color: $warning;
-        italic: true;
+        text-style: italic;
     }
-    
+
     .error_message {
         color: $error;
-        bold: true;
+        text-style: bold;
     }
     
     .timestamp {
