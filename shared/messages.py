@@ -45,49 +45,49 @@ class BaseMessage:
 @dataclass
 class LoginRequest(BaseMessage):
     """登录请求消息"""
-    username: str
-    password: str
     message_type: str = MessageType.LOGIN_REQUEST
+    username: str = ""
+    password: str = ""
 
 
 @dataclass
 class LoginResponse(BaseMessage):
     """登录响应消息"""
-    success: bool
+    message_type: str = MessageType.LOGIN_RESPONSE
+    success: bool = False
     user_id: Optional[int] = None
     username: Optional[str] = None
     error_message: Optional[str] = None
-    message_type: str = MessageType.LOGIN_RESPONSE
 
 
 @dataclass
 class RegisterRequest(BaseMessage):
     """注册请求消息"""
-    username: str
-    password: str
     message_type: str = MessageType.REGISTER_REQUEST
+    username: str = ""
+    password: str = ""
 
 
 @dataclass
 class RegisterResponse(BaseMessage):
     """注册响应消息"""
-    success: bool
+    message_type: str = MessageType.REGISTER_RESPONSE
+    success: bool = False
     user_id: Optional[int] = None
     username: Optional[str] = None
     error_message: Optional[str] = None
-    message_type: str = MessageType.REGISTER_RESPONSE
 
 
 @dataclass
 class ChatMessage(BaseMessage):
     """聊天消息"""
-    sender_id: int
-    sender_username: str
-    chat_group_id: int
-    chat_group_name: str
-    content: str
-    message_id: Optional[int] = None
     message_type: str = MessageType.CHAT_MESSAGE
+    sender_id: int = 0
+    sender_username: str = ""
+    chat_group_id: int = 0
+    chat_group_name: str = ""
+    content: str = ""
+    message_id: Optional[int] = None
 
 
 @dataclass
@@ -121,52 +121,67 @@ class FileInfo:
 @dataclass
 class UserInfoResponse(BaseMessage):
     """用户信息响应"""
-    user_info: UserInfo
-    joined_chats_count: int
-    private_chats_count: int
-    group_chats_count: int
-    total_users_count: int
-    online_users_count: int
-    total_chats_count: int
     message_type: str = MessageType.USER_INFO_RESPONSE
+    user_info: Optional[UserInfo] = None
+    joined_chats_count: int = 0
+    private_chats_count: int = 0
+    group_chats_count: int = 0
+    total_users_count: int = 0
+    online_users_count: int = 0
+    total_chats_count: int = 0
 
 
 @dataclass
 class ListUsersResponse(BaseMessage):
     """用户列表响应"""
-    users: List[UserInfo]
     message_type: str = MessageType.LIST_USERS_RESPONSE
+    users: List[UserInfo] = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.users is None:
+            self.users = []
 
 
 @dataclass
 class ListChatsResponse(BaseMessage):
     """聊天组列表响应"""
-    chats: List[ChatGroupInfo]
     message_type: str = MessageType.LIST_CHATS_RESPONSE
+    chats: List[ChatGroupInfo] = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.chats is None:
+            self.chats = []
 
 
 @dataclass
 class FileListResponse(BaseMessage):
     """文件列表响应"""
-    files: List[FileInfo]
-    chat_group_id: int
     message_type: str = MessageType.FILE_LIST_RESPONSE
+    chat_group_id: int = 0
+    files: List[FileInfo] = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.files is None:
+            self.files = []
 
 
 @dataclass
 class SystemMessage(BaseMessage):
     """系统消息"""
-    content: str
-    level: str = "info"  # info, warning, error
     message_type: str = MessageType.SYSTEM_MESSAGE
+    content: str = ""
+    level: str = "info"  # info, warning, error
 
 
 @dataclass
 class ErrorMessage(BaseMessage):
     """错误消息"""
-    error_code: int
-    error_message: str
     message_type: str = MessageType.ERROR_MESSAGE
+    error_code: int = 0
+    error_message: str = ""
 
 
 def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
