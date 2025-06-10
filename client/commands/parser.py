@@ -43,6 +43,16 @@ def require_args(min_args: int = 1, error_msg: str = "请提供必要的参数")
     return decorator
 
 
+def format_file_size(size_bytes: int) -> str:
+    """格式化文件大小"""
+    if size_bytes < 1024:
+        return f"{size_bytes}B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f}KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.2f}MB"
+
+
 @dataclass
 class Command:
     """命令数据结构"""
@@ -443,8 +453,8 @@ class CommandHandler:
             chat_name = self.chat_client.current_chat_group['name']
             file_list = f"聊天组 '{chat_name}' 文件列表:\n"
             for file_info in files:
-                size_mb = file_info['file_size'] / (1024 * 1024)
-                file_list += f"  {file_info['original_filename']} ({size_mb:.2f}MB) - 上传者: {file_info['uploader_username']}\n"
+                size_str = format_file_size(file_info['file_size'])
+                file_list += f"  {file_info['original_filename']} ({size_str}) - 上传者: {file_info['uploader_username']}\n"
 
             return True, file_list.strip()
 
@@ -469,42 +479,30 @@ class CommandHandler:
         else:
             return False, message
     
+    @require_login
+    @require_args(1, "请指定聊天组名称")
     def handle_enter_chat(self, command: Command) -> tuple[bool, str]:
         """处理进入聊天组命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
-        if not command.args:
-            return False, "请指定聊天组名称"
-
         group_name = command.args[0]
 
         # 进入聊天组
         success, message = self.chat_client.enter_chat_group(group_name)
         return success, message
     
+    @require_login
+    @require_args(1, "请指定聊天组名称")
     def handle_join_chat(self, command: Command) -> tuple[bool, str]:
         """处理加入聊天组命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
-        if not command.args:
-            return False, "请指定聊天组名称"
-
         group_name = command.args[0]
 
         # 加入聊天组
         success, message = self.chat_client.join_chat_group(group_name)
         return success, message
     
+    @require_login
+    @require_args(1, "请指定文件路径")
     def handle_send_files(self, command: Command) -> tuple[bool, str]:
         """处理发送文件命令"""
-        if not self.chat_client.is_logged_in():
-            return False, "请先登录"
-
-        if not command.args:
-            return False, "请指定文件路径"
-
         # 发送多个文件
         results = []
         for file_path in command.args:
@@ -540,8 +538,8 @@ class CommandHandler:
 
             file_list = "可下载文件列表:\n"
             for file_info in files:
-                size_mb = file_info['file_size'] / (1024 * 1024)
-                file_list += f"  ID: {file_info['file_id']} - {file_info['original_filename']} ({size_mb:.2f}MB)\n"
+                size_str = format_file_size(file_info['file_size'])
+                file_list += f"  ID: {file_info['file_id']} - {file_info['original_filename']} ({size_str})\n"
                 file_list += f"    上传者: {file_info['uploader_username']} - 时间: {file_info['upload_time']}\n"
 
             return True, file_list.strip()

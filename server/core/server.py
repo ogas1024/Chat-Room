@@ -18,10 +18,7 @@ from ..utils.auth import (
     validate_username, validate_password, validate_chat_group_name,
     sanitize_message_content
 )
-# 暂时注释掉，将在后续重构中使用
-# from ..utils.common import (
-#     require_login, handle_exceptions, ResponseHelper, ValidationHelper, log_operation
-# )
+from ..utils.common import ResponseHelper
 from ...shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
     MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
@@ -309,10 +306,9 @@ class ChatRoomServer:
     def handle_user_info_request(self, client_socket: socket.socket):
         """处理用户信息请求"""
         try:
-            # 获取用户信息
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            # 验证用户登录
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 获取详细信息
@@ -330,9 +326,8 @@ class ChatRoomServer:
         """处理用户列表请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 获取用户列表
@@ -350,9 +345,8 @@ class ChatRoomServer:
         """处理聊天组列表请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 根据请求类型获取不同的聊天组列表
@@ -380,14 +374,17 @@ class ChatRoomServer:
         """处理创建聊天组请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            chat_name = request_data.get('chat_name', '')
+            request_data, error_msg = self.get_request_data(message, ['chat_name'])
+            if error_msg:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
+                return
+
+            chat_name = request_data['chat_name']
             member_usernames = request_data.get('member_usernames', [])
 
             # 验证聊天组名称
@@ -499,16 +496,35 @@ class ChatRoomServer:
     # 辅助方法
     def send_message(self, client_socket: socket.socket, message: BaseMessage):
         """发送消息到客户端"""
-        try:
-            message_json = message.to_json() + '\n'
-            client_socket.send(message_json.encode('utf-8'))
-        except Exception as e:
-            print(f"发送消息失败: {e}")
+        ResponseHelper.send_message(client_socket, message)
 
     def send_error(self, client_socket: socket.socket, error_code: int, error_message: str):
         """发送错误消息"""
-        error_msg = ErrorMessage(error_code=error_code, error_message=error_message)
-        self.send_message(client_socket, error_msg)
+        ResponseHelper.send_error(client_socket, error_code, error_message)
+
+    def verify_user_login(self, client_socket: socket.socket):
+        """验证用户登录状态，返回用户信息或None"""
+        user_info = self.user_manager.get_user_by_socket(client_socket)
+        if not user_info:
+            self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
+            return None
+        return user_info
+
+    def get_request_data(self, message: BaseMessage, required_fields: list = None):
+        """获取并验证请求数据"""
+        try:
+            request_data = getattr(message, 'to_dict', lambda: {})()
+
+            # 检查必需字段
+            if required_fields:
+                for field in required_fields:
+                    if field not in request_data or not request_data[field]:
+                        return None, f"缺少必需字段: {field}"
+
+            return request_data, None
+
+        except Exception as e:
+            return None, f"请求数据格式错误: {e}"
 
     def send_login_response(self, client_socket: socket.socket, success: bool,
                            user_id: int = None, username: str = None,
@@ -539,24 +555,19 @@ class ChatRoomServer:
         """处理文件上传请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            chat_group_id = request_data.get('chat_group_id')
-            filename = request_data.get('filename', '')
-            file_size = request_data.get('file_size', 0)
-
-            if not chat_group_id:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组ID不能为空")
+            request_data, error_msg = self.get_request_data(message, ['chat_group_id', 'filename', 'file_size'])
+            if error_msg:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
                 return
 
-            if not filename:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件名不能为空")
-                return
+            chat_group_id = request_data['chat_group_id']
+            filename = request_data['filename']
+            file_size = request_data['file_size']
 
             # 验证文件大小
             if file_size > MAX_FILE_SIZE:
@@ -671,18 +682,17 @@ class ChatRoomServer:
         """处理文件下载请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            file_id = request_data.get('file_id')
-
-            if not file_id:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件ID不能为空")
+            request_data, error_msg = self.get_request_data(message, ['file_id'])
+            if error_msg:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
                 return
+
+            file_id = request_data['file_id']
 
             # 获取文件元数据
             try:
@@ -794,9 +804,8 @@ class ChatRoomServer:
         """处理AI聊天请求"""
         try:
             # 验证用户登录
-            user_info = self.user_manager.get_user_by_socket(client_socket)
+            user_info = self.verify_user_login(client_socket)
             if not user_info:
-                self.send_error(client_socket, ErrorCode.INVALID_CREDENTIALS, "请先登录")
                 return
 
             # 检查AI功能是否启用
@@ -805,7 +814,11 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
+            request_data, error_msg = self.get_request_data(message)
+            if error_msg:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
+                return
+
             user_message = request_data.get('message', '')
             chat_group_id = request_data.get('chat_group_id')  # None表示私聊
             command = request_data.get('command', '')
