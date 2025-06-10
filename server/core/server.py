@@ -45,6 +45,7 @@ class ChatRoomServer:
         """初始化服务器"""
         self.host = host
         self.port = port
+        self.max_connections = MAX_CONNECTIONS
         self.server_socket = None
         self.running = False
         

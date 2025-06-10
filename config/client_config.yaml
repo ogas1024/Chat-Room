@@ -36,8 +36,8 @@ user:
   auto_login: false
   default_username: ''
   save_chat_history: true
-  chat_history_path: data/chat_history
-  download_path: downloads
+  chat_history_path: client/data/chat_history
+  download_path: client/downloads
   auto_accept_files: false
   max_download_size: 104857600
 chat:
@@ -65,7 +65,7 @@ commands:
 logging:
   level: INFO
   file_enabled: false
-  file_path: logs/client.log
+  file_path: client/logs/client.log
   file_max_size: 5242880
   file_backup_count: 3
   console_enabled: true

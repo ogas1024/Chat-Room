@@ -203,6 +203,86 @@ class ErrorMessage(BaseMessage):
     error_message: str = ""
 
 
+@dataclass
+class CreateChatRequest(BaseMessage):
+    """创建聊天组请求"""
+    message_type: str = MessageType.CREATE_CHAT_REQUEST
+    chat_name: str = ""
+    member_usernames: List[str] = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.member_usernames is None:
+            self.member_usernames = []
+
+
+@dataclass
+class CreateChatResponse(BaseMessage):
+    """创建聊天组响应"""
+    message_type: str = MessageType.CREATE_CHAT_RESPONSE
+    success: bool = False
+    chat_group_id: Optional[int] = None
+    chat_name: str = ""
+    error_message: Optional[str] = None
+
+
+@dataclass
+class JoinChatRequest(BaseMessage):
+    """加入聊天组请求"""
+    message_type: str = MessageType.JOIN_CHAT_REQUEST
+    chat_name: str = ""
+
+
+@dataclass
+class JoinChatResponse(BaseMessage):
+    """加入聊天组响应"""
+    message_type: str = MessageType.JOIN_CHAT_RESPONSE
+    success: bool = False
+    chat_group_id: Optional[int] = None
+    chat_name: str = ""
+    error_message: Optional[str] = None
+
+
+@dataclass
+class EnterChatRequest(BaseMessage):
+    """进入聊天组请求"""
+    message_type: str = MessageType.ENTER_CHAT_REQUEST
+    chat_name: str = ""
+
+
+@dataclass
+class EnterChatResponse(BaseMessage):
+    """进入聊天组响应"""
+    message_type: str = MessageType.ENTER_CHAT_RESPONSE
+    success: bool = False
+    chat_group_id: Optional[int] = None
+    chat_name: str = ""
+    error_message: Optional[str] = None
+
+
+@dataclass
+class FileListRequest(BaseMessage):
+    """文件列表请求"""
+    message_type: str = MessageType.FILE_LIST_REQUEST
+    chat_group_id: Optional[int] = None
+
+
+@dataclass
+class FileUploadRequest(BaseMessage):
+    """文件上传请求"""
+    message_type: str = MessageType.FILE_UPLOAD_REQUEST
+    filename: str = ""
+    file_data: str = ""
+    chat_group_id: Optional[int] = None
+
+
+@dataclass
+class FileDownloadRequest(BaseMessage):
+    """文件下载请求"""
+    message_type: str = MessageType.FILE_DOWNLOAD_REQUEST
+    file_id: str = ""
+
+
 def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
     """根据消息类型创建对应的消息对象"""
     message_type = data.get('message_type')
@@ -216,8 +296,17 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,
         MessageType.LIST_CHATS_RESPONSE: ListChatsResponse,
+        MessageType.CREATE_CHAT_REQUEST: CreateChatRequest,
+        MessageType.CREATE_CHAT_RESPONSE: CreateChatResponse,
+        MessageType.JOIN_CHAT_REQUEST: JoinChatRequest,
+        MessageType.JOIN_CHAT_RESPONSE: JoinChatResponse,
+        MessageType.ENTER_CHAT_REQUEST: EnterChatRequest,
+        MessageType.ENTER_CHAT_RESPONSE: EnterChatResponse,
+        MessageType.FILE_LIST_REQUEST: FileListRequest,
         MessageType.FILE_LIST_RESPONSE: FileListResponse,
+        MessageType.FILE_UPLOAD_REQUEST: FileUploadRequest,
         MessageType.FILE_UPLOAD_RESPONSE: FileUploadResponse,
+        MessageType.FILE_DOWNLOAD_REQUEST: FileDownloadRequest,
         MessageType.FILE_DOWNLOAD_RESPONSE: FileDownloadResponse,
         MessageType.SYSTEM_MESSAGE: SystemMessage,
         MessageType.ERROR_MESSAGE: ErrorMessage,

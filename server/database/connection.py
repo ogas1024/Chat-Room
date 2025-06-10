@@ -41,6 +41,16 @@ def get_db() -> DatabaseManager:
     return DatabaseConnection.get_instance()
 
 
+def get_connection():
+    """获取数据库连接的便捷函数（兼容性函数）"""
+    import sqlite3
+    db_manager = DatabaseConnection.get_instance()
+    # 创建一个新的连接对象用于测试
+    conn = sqlite3.connect(db_manager.db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
 def init_database(db_path: str = None):
     """初始化数据库"""
     if db_path:
