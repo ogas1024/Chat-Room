@@ -64,8 +64,8 @@ commands:
   custom_aliases: {}
 logging:
   level: INFO
-  file_enabled: false
-  file_path: client/logs/client.log
+  file_enabled: true
+  file_path: logs/client.log
   file_max_size: 5242880
   file_backup_count: 3
   console_enabled: true

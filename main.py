@@ -137,7 +137,7 @@ def main():
     client_parser = subparsers.add_parser('client', help='启动客户端')
     client_parser.add_argument('--host', default='localhost', help='服务器地址')
     client_parser.add_argument('--port', type=int, default=8888, help='服务器端口')
-    client_parser.add_argument('--mode', choices=['tui', 'simple'], default='tui', help='客户端模式')
+    client_parser.add_argument('--mode', choices=['tui', 'simple'], default='simple', help='客户端模式')
     
     # 演示命令
     demo_parser = subparsers.add_parser('demo', help='运行演示')

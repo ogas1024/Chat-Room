@@ -34,9 +34,10 @@ from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
     ErrorMessage, UserInfoResponse, ListUsersRequest, ListUsersResponse,
-    ListChatsRequest, ListChatsResponse, FileInfo, FileUploadRequest,
-    FileUploadResponse, FileDownloadRequest, FileDownloadResponse,
-    FileListRequest, EnterChatRequest, AIChatRequest, AIChatResponse
+    ListChatsRequest, ListChatsResponse, CreateChatRequest, JoinChatRequest,
+    FileInfo, FileUploadRequest, FileUploadResponse, FileDownloadRequest,
+    FileDownloadResponse, FileListRequest, FileListResponse, EnterChatRequest,
+    AIChatRequest, AIChatResponse
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
@@ -480,7 +481,7 @@ class ChatRoomServer:
             print(f"聊天组列表请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取聊天组列表失败")
 
-    def handle_create_chat_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_create_chat_request(self, client_socket: socket.socket, message: CreateChatRequest):
         """处理创建聊天组请求"""
         try:
             # 验证用户登录
@@ -489,13 +490,12 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data, error_msg = self.get_request_data(message, ['chat_name'])
-            if error_msg:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
-                return
+            chat_name = message.chat_name
+            member_usernames = getattr(message, 'member_usernames', [])
 
-            chat_name = request_data['chat_name']
-            member_usernames = request_data.get('member_usernames', [])
+            if not chat_name:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组名称不能为空")
+                return
 
             # 验证聊天组名称
             valid, error_msg = validate_chat_group_name(chat_name)
@@ -526,7 +526,7 @@ class ChatRoomServer:
             print(f"创建聊天组请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "创建聊天组失败")
 
-    def handle_join_chat_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_join_chat_request(self, client_socket: socket.socket, message: JoinChatRequest):
         """处理加入聊天组请求"""
         try:
             # 验证用户登录
@@ -536,8 +536,7 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            chat_name = request_data.get('chat_name', '')
+            chat_name = message.chat_name
 
             if not chat_name:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组名称不能为空")
@@ -556,7 +555,7 @@ class ChatRoomServer:
             print(f"加入聊天组请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "加入聊天组失败")
 
-    def handle_enter_chat_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_enter_chat_request(self, client_socket: socket.socket, message: EnterChatRequest):
         """处理进入聊天组请求"""
         try:
             # 验证用户登录
@@ -566,8 +565,7 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            chat_name = request_data.get('chat_name', '')
+            chat_name = message.chat_name
 
             if not chat_name:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组名称不能为空")
@@ -662,7 +660,7 @@ class ChatRoomServer:
         self.send_message(client_socket, response)
 
     # 文件传输处理方法
-    def handle_file_upload_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_file_upload_request(self, client_socket: socket.socket, message: FileUploadRequest):
         """处理文件上传请求"""
         try:
             # 验证用户登录
@@ -671,14 +669,13 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data, error_msg = self.get_request_data(message, ['chat_group_id', 'filename', 'file_size'])
-            if error_msg:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
-                return
+            chat_group_id = message.chat_group_id
+            filename = message.filename
+            file_size = message.file_size
 
-            chat_group_id = request_data['chat_group_id']
-            filename = request_data['filename']
-            file_size = request_data['file_size']
+            if not chat_group_id or not filename or not file_size:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "缺少必需的文件上传参数")
+                return
 
             # 验证文件大小
             if file_size > MAX_FILE_SIZE:
@@ -789,7 +786,7 @@ class ChatRoomServer:
                 os.remove(server_filepath)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件接收失败")
 
-    def handle_file_download_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_file_download_request(self, client_socket: socket.socket, message: FileDownloadRequest):
         """处理文件下载请求"""
         try:
             # 验证用户登录
@@ -798,12 +795,11 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data, error_msg = self.get_request_data(message, ['file_id'])
-            if error_msg:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
-                return
+            file_id = message.file_id
 
-            file_id = request_data['file_id']
+            if not file_id:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件ID不能为空")
+                return
 
             # 获取文件元数据
             try:
@@ -862,7 +858,7 @@ class ChatRoomServer:
             print(f"文件数据发送错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件发送失败")
 
-    def handle_file_list_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_file_list_request(self, client_socket: socket.socket, message: FileListRequest):
         """处理文件列表请求"""
         try:
             # 验证用户登录
@@ -872,8 +868,7 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            chat_group_id = request_data.get('chat_group_id')
+            chat_group_id = message.chat_group_id
 
             if not chat_group_id:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "聊天组ID不能为空")
@@ -900,9 +895,7 @@ class ChatRoomServer:
             ]
 
             # 发送文件列表响应
-            response = BaseMessage(
-                message_type=MessageType.FILE_LIST_RESPONSE,
-                success=True,
+            response = FileListResponse(
                 files=files
             )
             self.send_message(client_socket, response)
@@ -911,7 +904,7 @@ class ChatRoomServer:
             print(f"文件列表请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取文件列表失败")
 
-    def handle_ai_chat_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_ai_chat_request(self, client_socket: socket.socket, message: AIChatRequest):
         """处理AI聊天请求"""
         try:
             # 验证用户登录
@@ -925,14 +918,9 @@ class ChatRoomServer:
                 return
 
             # 获取请求数据
-            request_data, error_msg = self.get_request_data(message)
-            if error_msg:
-                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, error_msg)
-                return
-
-            user_message = request_data.get('message', '')
-            chat_group_id = request_data.get('chat_group_id')  # None表示私聊
-            command = request_data.get('command', '')
+            user_message = message.message
+            chat_group_id = message.chat_group_id  # None表示私聊
+            command = message.command
 
             # 处理AI命令
             if command:
@@ -956,8 +944,7 @@ class ChatRoomServer:
                     ai_response = "抱歉，我现在无法回复您的消息。"
 
             # 发送AI响应
-            response = BaseMessage(
-                message_type=MessageType.AI_CHAT_RESPONSE,
+            response = AIChatResponse(
                 success=True,
                 message=ai_response
             )
