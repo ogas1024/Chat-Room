@@ -105,10 +105,48 @@ class ServerConfig:
                 "level": "INFO",
                 "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                 "file_enabled": True,
-                "file_path": "logs/server.log",
+                "file_path": "logs/server/server.log",
                 "file_max_size": 10485760,  # 10MB
                 "file_backup_count": 5,
-                "console_enabled": True
+                "console_enabled": True,
+                # 详细日志配置
+                "categories": {
+                    "database": {
+                        "enabled": True,
+                        "level": "DEBUG",
+                        "file_path": "logs/server/database.log"
+                    },
+                    "ai": {
+                        "enabled": True,
+                        "level": "INFO",
+                        "file_path": "logs/server/ai.log"
+                    },
+                    "security": {
+                        "enabled": True,
+                        "level": "WARNING",
+                        "file_path": "logs/server/security.log"
+                    },
+                    "performance": {
+                        "enabled": True,
+                        "level": "INFO",
+                        "file_path": "logs/server/performance.log"
+                    },
+                    "network": {
+                        "enabled": True,
+                        "level": "INFO",
+                        "file_path": "logs/server/network.log"
+                    }
+                },
+                # 日志保留策略
+                "retention": {
+                    "days": 30,
+                    "max_size_gb": 1.0
+                },
+                # 敏感信息脱敏
+                "sanitization": {
+                    "enabled": True,
+                    "patterns": ["password", "api_key", "token", "secret", "auth"]
+                }
             },
             
             # 安全配置

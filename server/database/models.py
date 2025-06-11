@@ -11,6 +11,7 @@ from contextlib import contextmanager
 
 from shared.constants import ChatType, DEFAULT_PUBLIC_CHAT
 from shared.exceptions import DatabaseError, UserNotFoundError, ChatGroupNotFoundError
+from shared.logger import get_logger, log_database_operation
 
 
 class DatabaseManager:
@@ -19,9 +20,11 @@ class DatabaseManager:
     def __init__(self, db_path: str):
         """初始化数据库管理器"""
         self.db_path = db_path
+        self.logger = get_logger("database")
         # 确保数据库目录存在
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.init_database()
+        self.logger.info("数据库管理器初始化完成", db_path=db_path)
     
     @contextmanager
     def get_connection(self):
@@ -135,7 +138,7 @@ class DatabaseManager:
     def create_user(self, username: str, password: str) -> int:
         """创建新用户"""
         password_hash = self.hash_password(password)
-        
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             try:
@@ -144,17 +147,23 @@ class DatabaseManager:
                     (username, password_hash)
                 )
                 user_id = cursor.lastrowid
-                
+
                 # 自动加入公频聊天组
                 public_chat_id = self.get_chat_group_by_name(DEFAULT_PUBLIC_CHAT)['id']
                 cursor.execute(
                     "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)",
                     (public_chat_id, user_id)
                 )
-                
+
                 conn.commit()
+
+                # 记录日志
+                self.logger.info("创建新用户", user_id=user_id, username=username)
+                log_database_operation("create", "users", user_id=user_id, username=username)
+
                 return user_id
             except sqlite3.IntegrityError:
+                self.logger.warning("用户创建失败：用户名已存在", username=username)
                 raise DatabaseError(f"用户名 '{username}' 已存在")
     
     def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:

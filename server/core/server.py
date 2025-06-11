@@ -8,6 +8,7 @@ import threading
 import json
 import os
 import uuid
+import time
 
 from server.core.user_manager import UserManager
 from server.core.chat_manager import ChatManager
@@ -23,6 +24,11 @@ from shared.constants import (
     DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
     MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
+)
+from shared.logger import (
+    get_logger, log_event, log_network_event, log_user_action,
+    log_database_operation, log_ai_operation, log_security_event,
+    log_performance, log_file_operation, log_function_call
 )
 from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
@@ -46,7 +52,10 @@ class ChatRoomServer:
         self.max_connections = MAX_CONNECTIONS
         self.server_socket = None
         self.running = False
-        
+
+        # 初始化日志
+        self.logger = get_logger("server.core")
+
         # 初始化管理器
         self.user_manager = UserManager()
         self.chat_manager = ChatManager(self.user_manager)
@@ -54,31 +63,45 @@ class ChatRoomServer:
         # 初始化AI管理器
         ai_config = get_ai_config()
         self.ai_manager = AIManager(ai_config.get_api_key())
-        
+
+        # 响应助手
+        self.response_helper = ResponseHelper()
+
+        self.logger.info("服务器初始化完成", host=host, port=port, max_connections=MAX_CONNECTIONS)
         print(f"聊天室服务器初始化完成 - {host}:{port}")
     
     def start(self):
         """启动服务器"""
         try:
             # 初始化数据库
+            self.logger.info("初始化数据库...")
             init_database()
-            
+            log_database_operation("init", "all_tables")
+
             # 创建服务器socket
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.bind((self.host, self.port))
             self.server_socket.listen(MAX_CONNECTIONS)
-            
+
             self.running = True
+            self.logger.info("服务器启动成功", host=self.host, port=self.port, max_connections=MAX_CONNECTIONS)
+            log_network_event("server_started", client_ip=None, host=self.host, port=self.port)
+
             print(f"服务器启动成功，监听 {self.host}:{self.port}")
             print(f"最大连接数: {MAX_CONNECTIONS}")
-            
+
             # 接受客户端连接
             while self.running:
                 try:
                     client_socket, client_address = self.server_socket.accept()
+                    client_ip = client_address[0]
+                    client_port = client_address[1]
+
+                    self.logger.info("新客户端连接", client_ip=client_ip, client_port=client_port)
+                    log_network_event("client_connected", client_ip=client_ip, client_port=client_port)
                     print(f"新客户端连接: {client_address}")
-                    
+
                     # 为每个客户端创建处理线程
                     client_thread = threading.Thread(
                         target=self.handle_client,
@@ -86,12 +109,14 @@ class ChatRoomServer:
                         daemon=True
                     )
                     client_thread.start()
-                    
+
                 except socket.error as e:
                     if self.running:
+                        self.logger.error("接受连接时出错", error=str(e))
                         print(f"接受连接时出错: {e}")
-                    
+
         except Exception as e:
+            self.logger.error("服务器启动失败", error=str(e), exc_info=True)
             print(f"服务器启动失败: {e}")
         finally:
             self.stop()
@@ -105,41 +130,60 @@ class ChatRoomServer:
     
     def handle_client(self, client_socket: socket.socket, client_address):
         """处理客户端连接"""
+        client_ip = client_address[0]
+        client_port = client_address[1]
+
         try:
             while self.running:
                 # 接收消息
                 data = client_socket.recv(BUFFER_SIZE)
                 if not data:
                     break
-                
+
                 try:
                     # 解析消息
                     message_str = data.decode('utf-8').strip()
                     if not message_str:
                         continue
-                    
+
+                    # 记录接收到的消息
+                    self.logger.debug("接收消息", client_ip=client_ip, message_length=len(message_str))
+
                     # 处理可能的多条消息
                     for line in message_str.split('\n'):
                         if line.strip():
                             self.process_message(client_socket, line.strip())
-                            
+
                 except UnicodeDecodeError:
+                    self.logger.warning("消息编码错误", client_ip=client_ip)
+                    log_security_event("invalid_encoding", client_ip=client_ip)
                     self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "消息编码错误")
                 except Exception as e:
+                    self.logger.error("处理消息时出错", client_ip=client_ip, error=str(e))
                     print(f"处理消息时出错: {e}")
                     self.send_error(client_socket, ErrorCode.SERVER_ERROR, "服务器内部错误")
-                    
+
         except ConnectionResetError:
+            self.logger.info("客户端连接重置", client_ip=client_ip, client_port=client_port)
+            log_network_event("client_connection_reset", client_ip=client_ip)
             print(f"客户端 {client_address} 连接重置")
         except Exception as e:
+            self.logger.error("处理客户端时出错", client_ip=client_ip, error=str(e), exc_info=True)
             print(f"处理客户端 {client_address} 时出错: {e}")
         finally:
             # 清理连接
+            user_info = self.user_manager.get_user_by_socket(client_socket)
+            if user_info:
+                log_user_action(user_info['user_id'], user_info['username'], "disconnect")
+
             self.user_manager.disconnect_user(client_socket)
             try:
                 client_socket.close()
             except:
                 pass
+
+            self.logger.info("客户端连接已关闭", client_ip=client_ip, client_port=client_port)
+            log_network_event("client_disconnected", client_ip=client_ip)
             print(f"客户端 {client_address} 连接已关闭")
     
     def process_message(self, client_socket: socket.socket, message_str: str):
@@ -192,30 +236,48 @@ class ChatRoomServer:
     
     def handle_login(self, client_socket: socket.socket, message: LoginRequest):
         """处理登录请求"""
+        client_ip = client_socket.getpeername()[0] if client_socket else "unknown"
+
         try:
             # 验证用户名和密码格式
             valid, error_msg = validate_username(message.username)
             if not valid:
+                self.logger.warning("登录失败：用户名格式不正确", username=message.username, client_ip=client_ip)
+                log_security_event("invalid_username_format", username=message.username, client_ip=client_ip)
                 self.send_login_response(client_socket, False, error_message=error_msg)
                 return
-            
+
             valid, error_msg = validate_password(message.password)
             if not valid:
+                self.logger.warning("登录失败：密码格式不正确", username=message.username, client_ip=client_ip)
+                log_security_event("invalid_password_format", username=message.username, client_ip=client_ip)
                 self.send_login_response(client_socket, False, error_message=error_msg)
                 return
-            
+
             # 认证用户
+            self.logger.info("用户认证中", username=message.username, client_ip=client_ip)
             user_info = self.user_manager.authenticate_user(message.username, message.password)
-            
+
             # 登录用户
             self.user_manager.login_user(user_info['id'], client_socket)
-            
+
             # 自动进入公频聊天组
             public_chat_id = self.chat_manager.get_public_chat_id()
             self.user_manager.set_user_current_chat(user_info['id'], public_chat_id)
 
             # 获取公频聊天组信息
             public_chat_info = self.chat_manager.db.get_chat_group_by_id(public_chat_id)
+
+            # 记录成功登录
+            self.logger.info("用户登录成功",
+                           user_id=user_info['id'],
+                           username=user_info['username'],
+                           client_ip=client_ip)
+            log_user_action(user_info['id'], user_info['username'], "login", client_ip=client_ip)
+            log_security_event("login_success",
+                             user_id=user_info['id'],
+                             username=user_info['username'],
+                             client_ip=client_ip)
 
             # 发送成功响应（包含当前聊天组信息）
             self.send_login_response(
@@ -227,10 +289,13 @@ class ChatRoomServer:
                     'name': public_chat_info['name']
                 }
             )
-            
+
         except AuthenticationError as e:
+            self.logger.warning("用户认证失败", username=message.username, client_ip=client_ip, error=str(e))
+            log_security_event("login_failed", username=message.username, client_ip=client_ip, reason=str(e))
             self.send_login_response(client_socket, False, error_message=str(e))
         except Exception as e:
+            self.logger.error("登录处理错误", username=message.username, client_ip=client_ip, error=str(e), exc_info=True)
             print(f"登录处理错误: {e}")
             self.send_login_response(client_socket, False, error_message="登录失败")
     
@@ -279,6 +344,15 @@ class ChatRoomServer:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "消息内容不能为空")
                 return
 
+            # 记录消息发送
+            self.logger.info("用户发送消息",
+                           user_id=user_info['user_id'],
+                           username=user_info['username'],
+                           chat_group_id=message.chat_group_id,
+                           message_length=len(content))
+            log_user_action(user_info['user_id'], user_info['username'], "send_message",
+                          chat_group_id=message.chat_group_id, message_length=len(content))
+
             # 发送消息
             chat_message = self.chat_manager.send_message(
                 user_info['user_id'], message.chat_group_id, content
@@ -289,14 +363,27 @@ class ChatRoomServer:
 
             # 检查是否需要AI回复
             if self.ai_manager.is_enabled():
+                start_time = time.time()
                 ai_reply = self.ai_manager.process_message(
                     user_info['user_id'],
                     user_info['username'],
                     content,
                     message.chat_group_id
                 )
+                ai_response_time = time.time() - start_time
 
                 if ai_reply:
+                    # 记录AI回复
+                    self.logger.info("AI生成回复",
+                                   user_id=user_info['user_id'],
+                                   chat_group_id=message.chat_group_id,
+                                   response_time=ai_response_time,
+                                   reply_length=len(ai_reply))
+                    log_ai_operation("generate_reply", "glm-4-flash",
+                                   user_id=user_info['user_id'],
+                                   chat_group_id=message.chat_group_id,
+                                   response_time=ai_response_time)
+
                     # 创建AI回复消息
                     ai_message = self.chat_manager.send_message(
                         AI_USER_ID, message.chat_group_id, ai_reply
@@ -305,8 +392,14 @@ class ChatRoomServer:
                     self.chat_manager.broadcast_message_to_group(ai_message)
 
         except PermissionDeniedError as e:
+            self.logger.warning("消息发送权限被拒绝",
+                              user_id=user_info.get('user_id') if user_info else None,
+                              error=str(e))
             self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, str(e))
         except Exception as e:
+            self.logger.error("聊天消息处理错误",
+                            user_id=user_info.get('user_id') if user_info else None,
+                            error=str(e), exc_info=True)
             print(f"聊天消息处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "消息发送失败")
 

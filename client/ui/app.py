@@ -281,8 +281,9 @@ class ChatRoomApp(App):
         success = self.chat_client.send_chat_message(message, group_id)
 
         if success:
-            # 消息发送成功，显示在界面上（服务器会回传消息）
-            self.add_chat_message(self.current_user, message, is_self=True)
+            # 消息发送成功，等待服务器广播回来再显示
+            # 不在这里立即显示，避免重复显示
+            pass
         else:
             self.add_error_message("❌ 消息发送失败")
     

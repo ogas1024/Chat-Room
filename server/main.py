@@ -9,7 +9,9 @@ import argparse
 from typing import Optional
 
 from server.core.server import ChatRoomServer
+from server.config.server_config import get_server_config
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from shared.logger import init_logger, get_logger
 
 
 def signal_handler(signum, frame):
@@ -25,12 +27,12 @@ def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='聊天室服务器')
     parser.add_argument(
-        '--host', 
+        '--host',
         default=DEFAULT_HOST,
         help=f'服务器监听地址 (默认: {DEFAULT_HOST})'
     )
     parser.add_argument(
-        '--port', 
+        '--port',
         type=int,
         default=DEFAULT_PORT,
         help=f'服务器监听端口 (默认: {DEFAULT_PORT})'
@@ -40,18 +42,33 @@ def main():
         action='store_true',
         help='启用调试模式'
     )
-    
+
     args = parser.parse_args()
-    
-    # 设置信号处理
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
+
     try:
+        # 初始化日志系统
+        server_config = get_server_config()
+        logging_config = server_config.get_logging_config()
+
+        # 如果启用调试模式，调整日志级别
+        if args.debug:
+            logging_config['level'] = 'DEBUG'
+            logging_config['categories']['database']['level'] = 'DEBUG'
+            logging_config['categories']['performance']['level'] = 'DEBUG'
+
+        init_logger(logging_config, "server")
+        logger = get_logger("server.main")
+
+        logger.info("服务器启动中...", host=args.host, port=args.port, debug=args.debug)
+
+        # 设置信号处理
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
         # 创建并启动服务器
         server = ChatRoomServer(args.host, args.port)
         signal_handler.server = server  # 保存服务器实例用于信号处理
-        
+
         print("=" * 50)
         print("🚀 聊天室服务器")
         print("=" * 50)
@@ -61,13 +78,17 @@ def main():
         print("=" * 50)
         print("按 Ctrl+C 停止服务器")
         print("=" * 50)
-        
+
         # 启动服务器
         server.start()
-        
+
     except KeyboardInterrupt:
+        logger = get_logger("server.main")
+        logger.info("用户中断，正在关闭服务器...")
         print("\n用户中断，正在关闭服务器...")
     except Exception as e:
+        logger = get_logger("server.main")
+        logger.error(f"服务器启动失败: {e}", exc_info=True)
         print(f"服务器启动失败: {e}")
         sys.exit(1)
 
