@@ -143,6 +143,26 @@ class ListUsersResponse(BaseMessage):
         if self.users is None:
             self.users = []
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """从字典创建消息对象，正确处理嵌套的UserInfo对象"""
+        # 复制数据以避免修改原始数据
+        data_copy = data.copy()
+
+        # 处理users字段
+        if 'users' in data_copy and data_copy['users']:
+            users = []
+            for user_data in data_copy['users']:
+                if isinstance(user_data, dict):
+                    # 将字典转换为UserInfo对象
+                    users.append(UserInfo(**user_data))
+                else:
+                    # 如果已经是对象，直接使用
+                    users.append(user_data)
+            data_copy['users'] = users
+
+        return cls(**data_copy)
+
 
 @dataclass
 class ListChatsResponse(BaseMessage):
@@ -154,6 +174,26 @@ class ListChatsResponse(BaseMessage):
         super().__post_init__()
         if self.chats is None:
             self.chats = []
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """从字典创建消息对象，正确处理嵌套的ChatGroupInfo对象"""
+        # 复制数据以避免修改原始数据
+        data_copy = data.copy()
+
+        # 处理chats字段
+        if 'chats' in data_copy and data_copy['chats']:
+            chats = []
+            for chat_data in data_copy['chats']:
+                if isinstance(chat_data, dict):
+                    # 将字典转换为ChatGroupInfo对象
+                    chats.append(ChatGroupInfo(**chat_data))
+                else:
+                    # 如果已经是对象，直接使用
+                    chats.append(chat_data)
+            data_copy['chats'] = chats
+
+        return cls(**data_copy)
 
 
 @dataclass
@@ -167,6 +207,26 @@ class FileListResponse(BaseMessage):
         super().__post_init__()
         if self.files is None:
             self.files = []
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """从字典创建消息对象，正确处理嵌套的FileInfo对象"""
+        # 复制数据以避免修改原始数据
+        data_copy = data.copy()
+
+        # 处理files字段
+        if 'files' in data_copy and data_copy['files']:
+            files = []
+            for file_data in data_copy['files']:
+                if isinstance(file_data, dict):
+                    # 将字典转换为FileInfo对象
+                    files.append(FileInfo(**file_data))
+                else:
+                    # 如果已经是对象，直接使用
+                    files.append(file_data)
+            data_copy['files'] = files
+
+        return cls(**data_copy)
 
 
 @dataclass

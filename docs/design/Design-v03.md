@@ -58,6 +58,8 @@ TUI 使用 *Textual* 库 实现, 优先实现基本界面, 进阶的界面如果
   * 可以进入一个 *别名* 为 `{chat_name}` 的聊天组 **如果本用户存在于这个聊天组的用户列表中** (默认存在的公频的名称为: `public`)。
 * `/join_chat {chat_name}`
   * 加入到一个 *别名* 为 `{chat_name}` 的聊天组中, **将本用户加入到这个聊天组的用户列表中**。
+* `/history`
+  * 在聊天区显示当前聊天组的所有聊天记录。
 * `/send_files {file_path...}`
   * 将本机的 `{file_path}` 文件通过**服务器中转**传输到当前聊天组。`file_path`是可变长参数。
 * `/recv_files {options}`
