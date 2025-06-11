@@ -10,7 +10,7 @@ import socket
 from unittest.mock import patch
 
 from server.core.server import ChatRoomServer
-from client.network.client import ChatClient
+from client.core.client import ChatClient
 from server.database.connection import DatabaseConnection
 from shared.constants import DEFAULT_HOST
 

@@ -5,7 +5,7 @@
 
 import sys
 
-from client.network.client import ChatClient
+from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT
 

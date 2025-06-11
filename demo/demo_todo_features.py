@@ -18,7 +18,7 @@ def demo_command_parser():
     print("🎯 演示命令解析器功能")
     print("=" * 40)
     
-    from src.client.network.client import ChatClient
+    from src.client.core.client import ChatClient
     from src.client.commands.parser import CommandHandler
     
     # 创建客户端和命令处理器
@@ -57,7 +57,7 @@ def demo_chat_client_methods():
     print("🎯 演示ChatClient新方法")
     print("=" * 40)
     
-    from src.client.network.client import ChatClient
+    from src.client.core.client import ChatClient
     
     client = ChatClient()
     

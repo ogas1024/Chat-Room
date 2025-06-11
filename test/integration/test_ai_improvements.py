@@ -34,7 +34,7 @@ def test_zhipu_client_initialization():
     print("\n🔍 测试智谱AI客户端初始化...")
     
     try:
-        from src.server.ai.zhipu_client import ZhipuClient
+        from server.ai.zhipu_client import ZhipuClient
         
         # 测试无API密钥的情况
         try:
@@ -77,7 +77,7 @@ def test_ai_config():
     print("\n🔍 测试AI配置...")
     
     try:
-        from src.server.config.ai_config import get_ai_config, print_ai_setup_guide
+        from server.config.ai_config import get_ai_config, print_ai_setup_guide
         
         config = get_ai_config()
         
@@ -113,7 +113,7 @@ def test_ai_manager():
     print("\n🔍 测试AI管理器...")
     
     try:
-        from src.server.ai.ai_manager import AIManager
+        from server.ai.ai_manager import AIManager
         
         # 测试初始化（无API密钥）
         manager = AIManager()
@@ -151,7 +151,7 @@ def test_context_manager():
     print("\n🔍 测试上下文管理器...")
     
     try:
-        from src.server.ai.context_manager import ContextManager
+        from server.ai.context_manager import ContextManager
         
         manager = ContextManager()
         
@@ -195,7 +195,7 @@ def test_real_api_call():
         return True
     
     try:
-        from src.server.ai.zhipu_client import ZhipuClient
+        from server.ai.zhipu_client import ZhipuClient
         
         client = ZhipuClient(api_key)
         
@@ -266,7 +266,7 @@ def main():
         print("❌ 部分测试失败，请检查实现")
         
         # 显示设置指南
-        from src.server.config.ai_config import print_ai_setup_guide
+        from server.config.ai_config import print_ai_setup_guide
         print_ai_setup_guide()
         
         return False

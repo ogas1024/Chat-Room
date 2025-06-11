@@ -21,7 +21,7 @@ def test_configuration_system():
     
     try:
         # 测试服务器配置
-        from src.server.config.server_config import get_server_config
+        from server.config.server_config import get_server_config
         server_config = get_server_config()
         
         print(f"  ✅ 服务器配置加载成功")
@@ -30,7 +30,7 @@ def test_configuration_system():
         print(f"     - 配置文件: {server_config.config_file}")
         
         # 测试客户端配置
-        from src.client.config.client_config import get_client_config
+        from client.config.client_config import get_client_config
         client_config = get_client_config()
         
         print(f"  ✅ 客户端配置加载成功")
@@ -50,7 +50,7 @@ def test_ai_integration():
     print("\n🤖 测试AI集成...")
     
     try:
-        from src.server.config.ai_config import get_ai_config
+        from server.config.ai_config import get_ai_config
         ai_config = get_ai_config()
         
         print(f"  ✅ AI配置加载成功")
@@ -61,7 +61,7 @@ def test_ai_integration():
         
         # 测试智谱AI客户端
         if ai_config.get_api_key():
-            from src.server.ai.zhipu_client import ZhipuClient
+            from server.ai.zhipu_client import ZhipuClient
             try:
                 client = ZhipuClient()
                 print(f"  ✅ 智谱AI客户端初始化成功")
@@ -84,7 +84,7 @@ def test_database_connection():
     print("\n💾 测试数据库连接...")
     
     try:
-        from src.server.database.connection import get_connection
+        from server.database.connection import get_connection
         
         conn = get_connection()
         cursor = conn.cursor()
@@ -110,8 +110,8 @@ def test_server_startup():
     print("\n🚀 测试服务器启动...")
     
     try:
-        from src.server.core.server import ChatRoomServer
-        from src.server.config.server_config import get_server_config
+        from server.core.server import ChatRoomServer
+        from server.config.server_config import get_server_config
         
         config = get_server_config()
         
@@ -136,8 +136,8 @@ def test_client_initialization():
     print("\n📱 测试客户端初始化...")
     
     try:
-        from src.client.network.client import ChatClient
-        from src.client.config.client_config import get_client_config
+        from client.core.client import ChatClient
+        from client.config.client_config import get_client_config
         
         config = get_client_config()
         
@@ -160,8 +160,8 @@ def test_command_system():
     print("\n⌨️ 测试命令系统...")
     
     try:
-        from src.client.commands.command_handler import CommandHandler
-        from src.client.network.client import ChatClient
+        from client.commands.command_handler import CommandHandler
+        from client.core.client import ChatClient
         
         client = ChatClient()
         handler = CommandHandler(client)
@@ -202,7 +202,7 @@ def test_message_protocol():
     print("\n📨 测试消息协议...")
     
     try:
-        from src.shared.protocol import MessageType, create_message, parse_message
+        from shared.protocol import MessageType, create_message, parse_message
         
         # 测试消息创建和解析
         test_message = create_message(MessageType.LOGIN_REQUEST, {
@@ -229,7 +229,7 @@ def test_file_operations():
     print("\n📁 测试文件操作...")
     
     try:
-        from src.server.config.server_config import get_server_config
+        from server.config.server_config import get_server_config
         
         config = get_server_config()
         

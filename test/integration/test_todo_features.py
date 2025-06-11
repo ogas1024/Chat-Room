@@ -17,7 +17,7 @@ def test_imports():
     print("🔍 测试模块导入...")
     
     try:
-        from client.network.client import ChatClient
+        from client.core.client import ChatClient
         from client.commands.parser import CommandHandler, Command
         from client.ui.app import ChatRoomApp
         from shared.constants import MessageType
@@ -33,7 +33,7 @@ def test_chat_client_methods():
     print("\n🔍 测试ChatClient新方法...")
     
     try:
-        from client.network.client import ChatClient
+        from client.core.client import ChatClient
         
         client = ChatClient()
         
@@ -69,7 +69,7 @@ def test_command_handler():
     print("\n🔍 测试命令处理器...")
     
     try:
-        from client.network.client import ChatClient
+        from client.core.client import ChatClient
         from client.commands.parser import CommandHandler, Command
         
         client = ChatClient()

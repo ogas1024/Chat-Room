@@ -25,7 +25,7 @@ from rich.console import Console
 from datetime import datetime
 from typing import Optional
 
-from client.network.client import ChatClient
+from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
 from client.ui.themes import get_theme_manager, apply_theme_to_console
 from client.ui.components import EnhancedChatLog, StatusPanel, EnhancedInput, LoadingIndicator

@@ -15,7 +15,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from server.core.server import ChatRoomServer
-from client.network.client import ChatClient
+from client.core.client import ChatClient
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT
 
 

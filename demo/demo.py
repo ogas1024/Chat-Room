@@ -15,7 +15,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from server.core.server import ChatRoomServer
-from client.network.client import ChatClient
+from client.core.client import ChatClient
 
 
 def demo_server():
