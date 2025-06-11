@@ -33,8 +33,9 @@ from shared.logger import (
 from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
-    ErrorMessage, UserInfoResponse, ListUsersResponse, ListChatsResponse,
-    FileInfo, FileUploadResponse, FileDownloadResponse
+    ErrorMessage, UserInfoResponse, ListUsersRequest, ListUsersResponse,
+    ListChatsRequest, ListChatsResponse, FileInfo, FileUploadResponse,
+    FileDownloadResponse
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
@@ -422,7 +423,7 @@ class ChatRoomServer:
             print(f"用户信息请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取用户信息失败")
 
-    def handle_list_users_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_list_users_request(self, client_socket: socket.socket, message: ListUsersRequest):
         """处理用户列表请求"""
         try:
             # 验证用户登录
@@ -430,8 +431,16 @@ class ChatRoomServer:
             if not user_info:
                 return
 
-            # 获取用户列表
-            users = self.user_manager.get_all_users()
+            # 根据请求类型获取不同的用户列表
+            list_type = message.list_type
+            chat_group_id = message.chat_group_id
+
+            if list_type == "current_chat" and chat_group_id:
+                # 获取当前聊天组的用户列表
+                users = self.user_manager.get_chat_group_users(chat_group_id)
+            else:
+                # 获取所有用户列表
+                users = self.user_manager.get_all_users()
 
             # 发送响应
             response = ListUsersResponse(users=users)
@@ -441,7 +450,7 @@ class ChatRoomServer:
             print(f"用户列表请求处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取用户列表失败")
 
-    def handle_list_chats_request(self, client_socket: socket.socket, message: BaseMessage):
+    def handle_list_chats_request(self, client_socket: socket.socket, message: ListChatsRequest):
         """处理聊天组列表请求"""
         try:
             # 验证用户登录
@@ -450,16 +459,16 @@ class ChatRoomServer:
                 return
 
             # 根据请求类型获取不同的聊天组列表
-            request_data = getattr(message, 'to_dict', lambda: {})()
-            list_type = request_data.get('list_type', 'user_chats')
+            list_type = message.list_type
 
-            if list_type == 'user_chats':
+            if list_type == 'joined':
                 # 用户加入的聊天组
                 chats = self.chat_manager.get_user_chat_groups(user_info['user_id'])
-            elif list_type == 'group_chats':
+            elif list_type == 'all':
                 # 所有群聊
                 chats = self.chat_manager.get_all_group_chats()
             else:
+                # 默认返回用户加入的聊天组
                 chats = self.chat_manager.get_user_chat_groups(user_info['user_id'])
 
             # 发送响应

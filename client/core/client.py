@@ -391,7 +391,7 @@ class ChatClient:
         Args:
             list_type: 列表类型 ("all", "current_chat")
         """
-        from shared.messages import BaseMessage
+        from shared.messages import ListUsersRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -401,8 +401,7 @@ class ChatClient:
             return False, "未连接到服务器", None
 
         # 发送用户列表请求
-        request = BaseMessage(
-            message_type=MessageType.LIST_USERS_REQUEST,
+        request = ListUsersRequest(
             list_type=list_type,
             chat_group_id=self.current_chat_group['id'] if self.current_chat_group else None
         )
@@ -436,7 +435,7 @@ class ChatClient:
         Args:
             list_type: 列表类型 ("joined", "all")
         """
-        from shared.messages import BaseMessage
+        from shared.messages import ListChatsRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -446,8 +445,7 @@ class ChatClient:
             return False, "未连接到服务器", None
 
         # 发送聊天组列表请求
-        request = BaseMessage(
-            message_type=MessageType.LIST_CHATS_REQUEST,
+        request = ListChatsRequest(
             list_type=list_type
         )
         if not self.network_client.send_message(request):

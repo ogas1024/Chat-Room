@@ -262,6 +262,21 @@ class EnterChatResponse(BaseMessage):
 
 
 @dataclass
+class ListUsersRequest(BaseMessage):
+    """用户列表请求"""
+    message_type: str = MessageType.LIST_USERS_REQUEST
+    list_type: str = "all"  # "all", "current_chat"
+    chat_group_id: Optional[int] = None
+
+
+@dataclass
+class ListChatsRequest(BaseMessage):
+    """聊天组列表请求"""
+    message_type: str = MessageType.LIST_CHATS_REQUEST
+    list_type: str = "joined"  # "joined", "all"
+
+
+@dataclass
 class FileListRequest(BaseMessage):
     """文件列表请求"""
     message_type: str = MessageType.FILE_LIST_REQUEST
@@ -295,7 +310,9 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.REGISTER_RESPONSE: RegisterResponse,
         MessageType.CHAT_MESSAGE: ChatMessage,
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
+        MessageType.LIST_USERS_REQUEST: ListUsersRequest,
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,
+        MessageType.LIST_CHATS_REQUEST: ListChatsRequest,
         MessageType.LIST_CHATS_RESPONSE: ListChatsResponse,
         MessageType.CREATE_CHAT_REQUEST: CreateChatRequest,
         MessageType.CREATE_CHAT_RESPONSE: CreateChatResponse,

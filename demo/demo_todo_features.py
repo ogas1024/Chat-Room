@@ -18,8 +18,8 @@ def demo_command_parser():
     print("🎯 演示命令解析器功能")
     print("=" * 40)
     
-    from src.client.core.client import ChatClient
-    from src.client.commands.parser import CommandHandler
+    from client.core.client import ChatClient
+    from client.commands.parser import CommandHandler
     
     # 创建客户端和命令处理器
     client = ChatClient()
@@ -57,7 +57,7 @@ def demo_chat_client_methods():
     print("🎯 演示ChatClient新方法")
     print("=" * 40)
     
-    from src.client.core.client import ChatClient
+    from client.core.client import ChatClient
     
     client = ChatClient()
     
@@ -88,7 +88,7 @@ def demo_message_types():
     print("🎯 演示新的消息类型")
     print("=" * 40)
     
-    from src.shared.constants import MessageType
+    from shared.constants import MessageType
     
     # 新增的消息类型
     new_message_types = [
@@ -157,7 +157,7 @@ def demo_file_operations():
     print("  ✅ 文件类型检查 (支持常见格式)")
     
     print("\n📋 支持的文件类型:")
-    from src.shared.constants import ALLOWED_FILE_EXTENSIONS
+    from shared.constants import ALLOWED_FILE_EXTENSIONS
     print(f"  {', '.join(ALLOWED_FILE_EXTENSIONS)}")
     
     print()
