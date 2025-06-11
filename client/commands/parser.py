@@ -4,11 +4,13 @@
 """
 
 import shlex
+import time
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from functools import wraps
 
 from shared.constants import COMMAND_PREFIX
+from shared.logger import get_logger, log_user_action
 
 
 def require_login(func: Callable) -> Callable:
@@ -270,12 +272,13 @@ class CommandParser:
 
 class CommandHandler:
     """命令处理器"""
-    
+
     def __init__(self, chat_client):
         """初始化命令处理器"""
         self.chat_client = chat_client
         self.parser = CommandParser()
         self.command_handlers: Dict[str, Callable] = {}
+        self.logger = get_logger("client.commands")
         self._register_handlers()
     
     def _register_handlers(self):
@@ -298,17 +301,44 @@ class CommandHandler:
     
     def handle_command(self, input_text: str) -> tuple[bool, str]:
         """处理命令"""
+        start_time = time.time()
+
         command = self.parser.parse_command(input_text)
         if not command:
+            self.logger.warning("无效的命令格式", command=input_text)
             return False, "无效的命令格式"
-        
+
         if command.name not in self.command_handlers:
+            self.logger.warning("未知命令", command=command.name, input=input_text)
             return False, f"未知命令: {command.name}"
-        
+
         try:
+            # 记录命令开始执行
+            self.logger.info("执行命令", command=command.name, args=command.args, options=command.options)
+
+            # 如果用户已登录，记录用户操作
+            if self.chat_client.is_logged_in() and self.chat_client.current_user:
+                user_id = self.chat_client.current_user.get('id')
+                username = self.chat_client.current_user.get('username')
+                if user_id and username:
+                    log_user_action(user_id, username, f"command_{command.name}",
+                                  command_args=command.args, command_options=command.options)
+
             handler = self.command_handlers[command.name]
-            return handler(command)
+            success, message = handler(command)
+
+            # 记录命令执行结果
+            duration = time.time() - start_time
+            if success:
+                self.logger.info("命令执行成功", command=command.name, duration=duration, result_length=len(message))
+            else:
+                self.logger.warning("命令执行失败", command=command.name, duration=duration, error=message)
+
+            return success, message
+
         except Exception as e:
+            duration = time.time() - start_time
+            self.logger.error("命令执行异常", command=command.name, duration=duration, error=str(e), exc_info=True)
             return False, f"命令执行错误: {str(e)}"
     
     def handle_help(self, command: Command) -> tuple[bool, str]:
@@ -364,7 +394,8 @@ class CommandHandler:
         if not command.options:
             return False, "请指定列表类型: -u(用户) -s(当前聊天组用户) -c(已加入聊天组) -g(所有群聊) -f(文件)"
 
-        option = command.options[0]
+        # 获取第一个选项（字典的第一个键）
+        option = list(command.options.keys())[0]
 
         if option == "-u":
             # 显示所有用户
@@ -522,7 +553,8 @@ class CommandHandler:
         if not command.options:
             return False, "请指定操作: -l(列出文件) -n <文件ID>(下载文件) -a(下载所有)"
 
-        option = command.options[0]
+        # 获取第一个选项（字典的第一个键）
+        option = list(command.options.keys())[0]
 
         if option == "-l":
             # 列出可下载的文件

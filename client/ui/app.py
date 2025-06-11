@@ -256,6 +256,9 @@ class ChatRoomApp(App):
                 success, message = self.command_handler.handle_command(command)
                 if success:
                     self.add_system_message(f"✅ {message}")
+                    # 如果是列表命令，更新状态区域
+                    if command.startswith('/list'):
+                        self.update_status_area_with_list_result(command, message)
                 else:
                     self.add_error_message(f"❌ {message}")
             else:
@@ -507,6 +510,56 @@ class ChatRoomApp(App):
                     self.status_list.append(ListItem(Label("  暂无其他用户")))
             else:
                 self.status_list.append(ListItem(Label("  请先进入聊天组")))
+
+    def update_status_area_with_list_result(self, command: str, result: str):
+        """根据列表命令结果更新状态区域"""
+        if not self.status_list:
+            return
+
+        # 清空现有内容
+        self.status_list.clear()
+
+        # 添加基本状态信息
+        status_text = f"连接: {self.connection_status}"
+        self.status_list.append(ListItem(Label(status_text)))
+
+        if self.current_user:
+            user_text = f"用户: {self.current_user}"
+            self.status_list.append(ListItem(Label(user_text)))
+
+        chat_text = f"聊天组: {self.current_chat}"
+        self.status_list.append(ListItem(Label(chat_text)))
+
+        # 添加分隔线
+        self.status_list.append(ListItem(Label("─" * 20)))
+
+        # 添加命令结果标题
+        if "/list -u" in command:
+            title = "所有用户列表:"
+        elif "/list -s" in command:
+            title = "当前聊天组成员:"
+        elif "/list -c" in command:
+            title = "已加入的聊天组:"
+        elif "/list -g" in command:
+            title = "所有群聊列表:"
+        elif "/list -f" in command:
+            title = "聊天组文件列表:"
+        else:
+            title = "查询结果:"
+
+        self.status_list.append(ListItem(Label(title)))
+
+        # 解析并显示结果
+        lines = result.split('\n')
+        for line in lines[1:]:  # 跳过第一行标题
+            if line.strip():
+                # 限制显示长度，避免界面过于拥挤
+                display_line = line[:50] + "..." if len(line) > 50 else line
+                self.status_list.append(ListItem(Label(display_line)))
+
+        # 如果结果太多，显示提示
+        if len(lines) > 10:
+            self.status_list.append(ListItem(Label(f"... 还有 {len(lines) - 10} 项")))
 
     # 网络消息处理器
     def handle_chat_message(self, message):
