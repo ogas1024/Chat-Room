@@ -34,8 +34,9 @@ from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
     ErrorMessage, UserInfoResponse, ListUsersRequest, ListUsersResponse,
-    ListChatsRequest, ListChatsResponse, FileInfo, FileUploadResponse,
-    FileDownloadResponse
+    ListChatsRequest, ListChatsResponse, FileInfo, FileUploadRequest,
+    FileUploadResponse, FileDownloadRequest, FileDownloadResponse,
+    FileListRequest, EnterChatRequest, AIChatRequest, AIChatResponse
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,

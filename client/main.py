@@ -238,10 +238,38 @@ def main():
         default='tui',
         help='客户端模式: tui(图形界面) 或 simple(简单命令行)'
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='启用调试模式'
+    )
 
     args = parser.parse_args()
 
     try:
+        # 初始化客户端日志系统
+        from client.config.client_config import get_client_config
+        from shared.logger import init_logger
+
+        client_config = get_client_config()
+        logging_config = client_config.get_logging_config()
+
+        # 如果启用调试模式，调整日志级别
+        if args.debug:
+            logging_config['level'] = 'DEBUG'
+            logging_config['console_enabled'] = True
+
+        # 根据模式调整日志配置
+        if args.mode == 'tui':
+            # TUI模式下禁用控制台日志，避免干扰界面
+            logging_config['console_enabled'] = False
+        else:
+            # 简单模式下启用控制台日志
+            logging_config['console_enabled'] = True
+
+        # 初始化日志系统
+        init_logger(logging_config, "client")
+
         if args.mode == 'tui':
             # 使用TUI界面
             try:

@@ -136,11 +136,11 @@ class ClientConfig:
             # 日志配置
             "logging": {
                 "level": "INFO",
-                "file_enabled": False,
+                "file_enabled": True,
                 "file_path": "logs/client.log",
                 "file_max_size": 5242880,  # 5MB
                 "file_backup_count": 3,
-                "console_enabled": True
+                "console_enabled": False  # TUI模式下禁用控制台日志
             },
             
             # 性能配置

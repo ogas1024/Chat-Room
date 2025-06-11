@@ -554,7 +554,7 @@ class ChatClient:
 
     def enter_chat_group(self, group_name: str) -> tuple[bool, str]:
         """进入聊天组（切换当前聊天组）"""
-        from shared.messages import BaseMessage
+        from shared.messages import EnterChatRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -564,9 +564,8 @@ class ChatClient:
             return False, "未连接到服务器"
 
         # 发送进入聊天组请求
-        request = BaseMessage(
-            message_type=MessageType.ENTER_CHAT_REQUEST,
-            group_name=group_name
+        request = EnterChatRequest(
+            chat_name=group_name
         )
         if not self.network_client.send_message(request):
             return False, "发送请求失败"
@@ -597,7 +596,7 @@ class ChatClient:
 
     def list_files(self, chat_group_id: int = None) -> tuple[bool, str, Optional[List[Dict[str, Any]]]]:
         """获取聊天组文件列表"""
-        from shared.messages import BaseMessage
+        from shared.messages import FileListRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -612,8 +611,7 @@ class ChatClient:
             return False, "请先进入聊天组", None
 
         # 发送文件列表请求
-        request = BaseMessage(
-            message_type=MessageType.FILE_LIST_REQUEST,
+        request = FileListRequest(
             chat_group_id=group_id
         )
         if not self.network_client.send_message(request):
@@ -645,7 +643,7 @@ class ChatClient:
     def send_file(self, file_path: str) -> tuple[bool, str]:
         """发送文件到当前聊天组"""
         import os
-        from shared.messages import BaseMessage
+        from shared.messages import FileUploadRequest
         from shared.constants import MessageType, MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS
 
         if not self.is_logged_in():
@@ -674,8 +672,7 @@ class ChatClient:
         filename = os.path.basename(file_path)
 
         # 发送文件上传请求
-        request = BaseMessage(
-            message_type=MessageType.FILE_UPLOAD_REQUEST,
+        request = FileUploadRequest(
             chat_group_id=self.current_chat_group['id'],
             filename=filename,
             file_size=file_size
@@ -702,7 +699,7 @@ class ChatClient:
 
     def download_file(self, file_id: int, save_path: str = None) -> tuple[bool, str]:
         """下载文件"""
-        from shared.messages import BaseMessage
+        from shared.messages import FileDownloadRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -712,10 +709,8 @@ class ChatClient:
             return False, "未连接到服务器"
 
         # 发送文件下载请求
-        request = BaseMessage(
-            message_type=MessageType.FILE_DOWNLOAD_REQUEST,
-            file_id=file_id,
-            save_path=save_path
+        request = FileDownloadRequest(
+            file_id=str(file_id)
         )
         if not self.network_client.send_message(request):
             return False, "发送请求失败"
@@ -746,7 +741,7 @@ class ChatClient:
             message: AI聊天消息 (可选)
             chat_group_id: 聊天组ID (None表示私聊)
         """
-        from shared.messages import BaseMessage
+        from shared.messages import AIChatRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -756,10 +751,9 @@ class ChatClient:
             return False, "未连接到服务器"
 
         # 发送AI请求
-        request = BaseMessage(
-            message_type=MessageType.AI_CHAT_REQUEST,
+        request = AIChatRequest(
             command=command,
-            message=message,
+            message=message or "",
             chat_group_id=chat_group_id
         )
 

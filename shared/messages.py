@@ -289,6 +289,7 @@ class FileUploadRequest(BaseMessage):
     message_type: str = MessageType.FILE_UPLOAD_REQUEST
     filename: str = ""
     file_data: str = ""
+    file_size: int = 0
     chat_group_id: Optional[int] = None
 
 
@@ -297,6 +298,24 @@ class FileDownloadRequest(BaseMessage):
     """文件下载请求"""
     message_type: str = MessageType.FILE_DOWNLOAD_REQUEST
     file_id: str = ""
+
+
+@dataclass
+class AIChatRequest(BaseMessage):
+    """AI聊天请求"""
+    message_type: str = MessageType.AI_CHAT_REQUEST
+    command: str = ""
+    message: str = ""
+    chat_group_id: Optional[int] = None
+
+
+@dataclass
+class AIChatResponse(BaseMessage):
+    """AI聊天响应"""
+    message_type: str = MessageType.AI_CHAT_RESPONSE
+    success: bool = False
+    message: str = ""
+    error_message: Optional[str] = None
 
 
 def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
@@ -326,6 +345,8 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.FILE_UPLOAD_RESPONSE: FileUploadResponse,
         MessageType.FILE_DOWNLOAD_REQUEST: FileDownloadRequest,
         MessageType.FILE_DOWNLOAD_RESPONSE: FileDownloadResponse,
+        MessageType.AI_CHAT_REQUEST: AIChatRequest,
+        MessageType.AI_CHAT_RESPONSE: AIChatResponse,
         MessageType.SYSTEM_MESSAGE: SystemMessage,
         MessageType.ERROR_MESSAGE: ErrorMessage,
     }
