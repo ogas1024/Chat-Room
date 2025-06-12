@@ -325,6 +325,19 @@ class ChatClient:
     
     def _handle_chat_message(self, message):
         """处理聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            # 消息没有聊天组ID，忽略显示
+            return
+
+        if not self.current_chat_group:
+            # 用户没有当前聊天组，忽略显示
+            return
+
+        if message.chat_group_id != self.current_chat_group['id']:
+            # 消息不属于当前聊天组，忽略显示
+            return
+
         # 这里可以添加消息显示逻辑
         print(f"[{message.sender_username}]: {message.content}")
     
@@ -517,7 +530,7 @@ class ChatClient:
 
     def join_chat_group(self, group_name: str) -> tuple[bool, str]:
         """加入聊天组"""
-        from shared.messages import BaseMessage
+        from shared.messages import JoinChatRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -527,9 +540,8 @@ class ChatClient:
             return False, "未连接到服务器"
 
         # 发送加入聊天组请求
-        request = BaseMessage(
-            message_type=MessageType.JOIN_CHAT_REQUEST,
-            group_name=group_name
+        request = JoinChatRequest(
+            chat_name=group_name
         )
         if not self.network_client.send_message(request):
             return False, "发送请求失败"
@@ -537,15 +549,12 @@ class ChatClient:
         # 等待响应
         response = self.network_client.wait_for_response(
             timeout=10.0,
-            message_types=[MessageType.JOIN_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
+            message_types=[MessageType.SYSTEM_MESSAGE, MessageType.ERROR_MESSAGE]
         )
 
         if response:
-            if response.message_type == MessageType.JOIN_CHAT_RESPONSE:
-                if hasattr(response, 'success') and response.success:
-                    return True, f"成功加入聊天组 '{group_name}'"
-                else:
-                    return False, response.error_message or "加入聊天组失败"
+            if response.message_type == MessageType.SYSTEM_MESSAGE:
+                return True, f"成功加入聊天组 '{group_name}'"
             elif hasattr(response, 'error_message'):
                 return False, response.error_message
 
@@ -579,11 +588,11 @@ class ChatClient:
             if response.message_type == MessageType.ENTER_CHAT_RESPONSE:
                 if hasattr(response, 'success') and response.success:
                     # 更新当前聊天组信息
-                    if hasattr(response, 'chat_group'):
+                    if hasattr(response, 'chat_group_id') and hasattr(response, 'chat_name'):
                         self.current_chat_group = {
-                            'id': response.chat_group.group_id,
-                            'name': response.chat_group.group_name,
-                            'is_private_chat': response.chat_group.is_private_chat
+                            'id': response.chat_group_id,
+                            'name': response.chat_name,
+                            'is_private_chat': False  # 默认值，可以后续从服务器获取
                         }
                     return True, f"已进入聊天组 '{group_name}'"
                 else:

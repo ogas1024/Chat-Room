@@ -191,12 +191,15 @@ class ChatRoomApp(App):
         """设置消息处理器"""
         if not self.chat_client:
             return
-        
+
         from shared.constants import MessageType
-        
+
         # 设置各种消息的处理器
         self.chat_client.network_client.set_message_handler(
             MessageType.CHAT_MESSAGE, self.handle_chat_message
+        )
+        self.chat_client.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY, self.handle_chat_history
         )
         self.chat_client.network_client.set_message_handler(
             MessageType.SYSTEM_MESSAGE, self.handle_system_message
@@ -256,8 +259,15 @@ class ChatRoomApp(App):
                 success, message = self.command_handler.handle_command(command)
                 if success:
                     self.add_system_message(f"✅ {message}")
+                    # 如果是进入聊天组命令，清空聊天记录并更新当前聊天组显示
+                    if command.startswith('/enter_chat'):
+                        self.clear_chat_log()
+                        # 更新当前聊天组显示
+                        if self.chat_client and self.chat_client.current_chat_group:
+                            self.current_chat = self.chat_client.current_chat_group['name']
+                        self.update_status_area()
                     # 如果是列表命令，更新状态区域
-                    if command.startswith('/list'):
+                    elif command.startswith('/list'):
                         self.update_status_area_with_list_result(command, message)
                 else:
                     self.add_error_message(f"❌ {message}")
@@ -563,7 +573,43 @@ class ChatRoomApp(App):
 
     # 网络消息处理器
     def handle_chat_message(self, message):
-        """处理聊天消息"""
+        """处理实时聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            # 消息没有聊天组ID，忽略显示
+            return
+
+        if not self.chat_client or not self.chat_client.current_chat_group:
+            # 没有聊天客户端或用户没有当前聊天组，忽略显示
+            return
+
+        current_group_id = self.chat_client.current_chat_group['id']
+        if message.chat_group_id != current_group_id:
+            # 消息不属于当前聊天组，忽略显示
+            return
+
+        is_self = (self.current_user and
+                  message.sender_username == self.current_user)
+        self.add_chat_message(
+            message.sender_username,
+            message.content,
+            is_self
+        )
+
+    def handle_chat_history(self, message):
+        """处理历史聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.chat_client or not self.chat_client.current_chat_group:
+            return
+
+        current_group_id = self.chat_client.current_chat_group['id']
+        if message.chat_group_id != current_group_id:
+            return
+
+        # 历史消息以不同样式显示，不区分是否为自己发送
         is_self = (self.current_user and
                   message.sender_username == self.current_user)
         self.add_chat_message(
@@ -614,6 +660,12 @@ class ChatRoomApp(App):
         message.append(content, style="cyan")
 
         self.chat_log.write(message)
+
+    def clear_chat_log(self):
+        """清空聊天记录"""
+        if self.chat_log:
+            self.chat_log.clear()
+            self.add_system_message("已清空聊天记录，正在加载历史消息...")
 
     # 应用生命周期
     def on_unmount(self) -> None:

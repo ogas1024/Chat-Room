@@ -518,6 +518,13 @@ class CommandHandler:
 
         # 进入聊天组
         success, message = self.chat_client.enter_chat_group(group_name)
+
+        # 如果成功进入聊天组，触发清空聊天记录的信号
+        if success:
+            # 这里可以通过回调或事件通知UI清空聊天记录
+            # 由于架构限制，我们在UI层处理这个逻辑
+            pass
+
         return success, message
     
     @require_login

@@ -30,15 +30,19 @@ class ChatManager:
         
         # 添加创建者到聊天组
         self.db.add_user_to_chat_group(group_id, creator_id)
-        
+
         # 添加初始成员
+        # 对于私聊：自动添加所有初始成员
+        # 对于普通群聊：不自动添加其他用户，他们需要主动加入
         if initial_members:
             for user_id in initial_members:
                 if user_id != creator_id:  # 避免重复添加创建者
                     try:
                         # 验证用户是否存在
                         self.db.get_user_by_id(user_id)
-                        self.db.add_user_to_chat_group(group_id, user_id)
+                        # 只对私聊自动添加成员
+                        if is_private_chat:
+                            self.db.add_user_to_chat_group(group_id, user_id)
                     except:
                         # 忽略不存在的用户
                         pass
@@ -65,15 +69,41 @@ class ChatManager:
         # 获取聊天组信息
         group_info = self.db.get_chat_group_by_name(group_name)
         group_id = group_info['id']
-        
+
         # 检查用户是否在聊天组中
         if not self.db.is_user_in_chat_group(group_id, user_id):
             raise PermissionDeniedError(f"您不是聊天组 '{group_name}' 的成员")
-        
+
         # 设置用户当前聊天组
         self.user_manager.set_user_current_chat(user_id, group_id)
-        
+
         return group_info
+
+    def load_chat_history_for_user(self, group_id: int, user_id: int, limit: int = 50) -> List[ChatMessage]:
+        """为用户加载聊天组历史消息"""
+        # 验证用户是否在聊天组中
+        if not self.db.is_user_in_chat_group(group_id, user_id):
+            raise PermissionDeniedError("您不在此聊天组中")
+
+        # 获取历史消息
+        history_data = self.db.get_chat_history(group_id, limit)
+
+        # 转换为ChatMessage对象列表
+        history_messages = []
+        for msg_data in history_data:
+            message = ChatMessage(
+                message_id=msg_data['id'],
+                sender_id=msg_data['sender_id'],
+                sender_username=msg_data['sender_username'],
+                chat_group_id=group_id,
+                chat_group_name="",  # 可以后续填充
+                content=msg_data['content'],
+                message_type=msg_data.get('message_type', 'text'),
+                timestamp=msg_data['timestamp']
+            )
+            history_messages.append(message)
+
+        return history_messages
     
     def send_message(self, sender_id: int, group_id: int, content: str) -> ChatMessage:
         """发送消息"""
@@ -104,19 +134,22 @@ class ChatManager:
         """向聊天组广播消息"""
         # 获取聊天组成员
         members = self.db.get_chat_group_members(message.chat_group_id)
-        
-        # 向在线成员发送消息
+
+        # 向在线成员发送消息，但只发送给当前在该聊天组中的用户
         for member in members:
             user_id = member['id']
             if self.user_manager.is_user_online(user_id):
-                user_socket = self.user_manager.get_user_socket(user_id)
-                if user_socket:
-                    try:
-                        message_json = message.to_json() + '\n'
-                        user_socket.send(message_json.encode('utf-8'))
-                    except:
-                        # 发送失败，可能连接已断开
-                        self.user_manager.disconnect_user(user_socket)
+                # 检查用户当前是否在这个聊天组中
+                current_chat_group = self.user_manager.get_user_current_chat(user_id)
+                if current_chat_group == message.chat_group_id:
+                    user_socket = self.user_manager.get_user_socket(user_id)
+                    if user_socket:
+                        try:
+                            message_json = message.to_json() + '\n'
+                            user_socket.send(message_json.encode('utf-8'))
+                        except:
+                            # 发送失败，可能连接已断开
+                            self.user_manager.disconnect_user(user_socket)
     
     def get_chat_history(self, group_id: int, user_id: int, limit: int = 50) -> List[Dict]:
         """获取聊天历史"""
