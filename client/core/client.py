@@ -204,7 +204,7 @@ class ChatClient:
     def _setup_message_handlers(self):
         """设置消息处理器"""
         from shared.constants import MessageType
-        
+
         # 设置各种消息类型的处理器
         self.network_client.set_message_handler(
             MessageType.LOGIN_RESPONSE, self._handle_login_response
@@ -214,6 +214,9 @@ class ChatClient:
         )
         self.network_client.set_message_handler(
             MessageType.CHAT_MESSAGE, self._handle_chat_message
+        )
+        self.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY, self._handle_chat_history
         )
         self.network_client.set_message_handler(
             MessageType.ERROR_MESSAGE, self._handle_error_message
@@ -340,6 +343,21 @@ class ChatClient:
 
         # 这里可以添加消息显示逻辑
         print(f"[{message.sender_username}]: {message.content}")
+
+    def _handle_chat_history(self, message):
+        """处理历史聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.current_chat_group:
+            return
+
+        if message.chat_group_id != self.current_chat_group['id']:
+            return
+
+        # 历史消息的默认处理（可以被上层应用覆盖）
+        print(f"[历史] [{message.sender_username}]: {message.content}")
     
     def _handle_error_message(self, message):
         """处理错误消息"""

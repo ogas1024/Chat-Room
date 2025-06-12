@@ -172,18 +172,19 @@ class ChatRoomApp(App):
         try:
             self.chat_client = ChatClient(self.host, self.port)
             self.command_handler = CommandHandler(self.chat_client)
-            
-            # 设置消息处理器
-            self.setup_message_handlers()
-            
+
             if self.chat_client.connect():
                 self.is_connected = True
                 self.connection_status = "已连接"
+
+                # 连接成功后设置消息处理器（确保覆盖ChatClient的默认处理器）
+                self.setup_message_handlers()
+
                 self.add_system_message(f"✅ 已连接到服务器 {self.host}:{self.port}")
                 self.update_status_area()
             else:
                 self.add_error_message(f"❌ 无法连接到服务器 {self.host}:{self.port}")
-                
+
         except Exception as e:
             self.add_error_message(f"❌ 连接错误: {str(e)}")
     
@@ -266,6 +267,9 @@ class ChatRoomApp(App):
                         if self.chat_client and self.chat_client.current_chat_group:
                             self.current_chat = self.chat_client.current_chat_group['name']
                         self.update_status_area()
+
+                        # 设置定时器检测历史消息加载完成
+                        self.set_timer(3.0, self.finish_history_loading)
                     # 如果是列表命令，更新状态区域
                     elif command.startswith('/list'):
                         self.update_status_area_with_list_result(command, message)
@@ -449,6 +453,37 @@ class ChatRoomApp(App):
         # 添加空行分隔
         self.chat_log.write("")
 
+    def add_history_message(self, sender: str, content: str, is_self: bool = False):
+        """添加历史聊天消息（使用较淡的样式）"""
+        if not self.chat_log:
+            return
+
+        # 按照设计文档格式，但使用较淡的样式表示历史消息
+        timestamp = datetime.now().strftime(DISPLAY_TIME_FORMAT)
+
+        # 第一行：用户名和时间戳（历史消息用较淡的颜色）
+        header_line = Text()
+        if is_self:
+            header_line.append(f"{sender:<30}", style="dim green")
+        else:
+            header_line.append(f"{sender:<30}", style="dim blue")
+        header_line.append(f"{timestamp}", style="dim")
+
+        # 第二行：消息内容（带>前缀，历史消息用较淡的颜色）
+        content_line = Text()
+        content_line.append(">", style="dim")
+        if is_self:
+            content_line.append(content, style="dim green")
+        else:
+            content_line.append(content, style="dim")
+
+        # 写入两行
+        self.chat_log.write(header_line)
+        self.chat_log.write(content_line)
+
+        # 添加空行分隔
+        self.chat_log.write("")
+
     def add_system_message(self, content: str):
         """添加系统消息"""
         if not self.chat_log:
@@ -609,14 +644,17 @@ class ChatRoomApp(App):
         if message.chat_group_id != current_group_id:
             return
 
-        # 历史消息以不同样式显示，不区分是否为自己发送
+        # 历史消息以特殊样式显示
         is_self = (self.current_user and
                   message.sender_username == self.current_user)
-        self.add_chat_message(
+        self.add_history_message(
             message.sender_username,
             message.content,
             is_self
         )
+
+        # 计数历史消息
+        self.on_history_message_received()
 
     def handle_system_message(self, message):
         """处理系统消息"""
@@ -666,6 +704,24 @@ class ChatRoomApp(App):
         if self.chat_log:
             self.chat_log.clear()
             self.add_system_message("已清空聊天记录，正在加载历史消息...")
+            # 设置一个标记，用于检测历史消息加载完成
+            self.history_loading = True
+            self.history_message_count = 0
+
+    def on_history_message_received(self):
+        """历史消息接收计数"""
+        if hasattr(self, 'history_loading') and self.history_loading:
+            self.history_message_count += 1
+
+    def finish_history_loading(self):
+        """完成历史消息加载"""
+        if hasattr(self, 'history_loading') and self.history_loading:
+            self.history_loading = False
+            if self.history_message_count > 0:
+                self.add_system_message(f"✅ 已加载 {self.history_message_count} 条历史消息")
+            else:
+                self.add_system_message("✅ 暂无历史消息")
+            self.history_message_count = 0
 
     # 应用生命周期
     def on_unmount(self) -> None:

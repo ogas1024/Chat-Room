@@ -594,8 +594,7 @@ class ChatRoomServer:
 
                 # 逐条发送历史消息
                 for history_msg in history_messages:
-                    # 设置消息类型为历史消息，以便客户端区分处理
-                    history_msg.message_type = MessageType.CHAT_HISTORY
+                    # 历史消息的类型已经在创建时设置为CHAT_HISTORY
                     self.send_message(client_socket, history_msg)
 
             except Exception as e:

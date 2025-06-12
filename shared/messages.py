@@ -388,6 +388,7 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.REGISTER_REQUEST: RegisterRequest,
         MessageType.REGISTER_RESPONSE: RegisterResponse,
         MessageType.CHAT_MESSAGE: ChatMessage,
+        MessageType.CHAT_HISTORY: ChatMessage,  # 历史消息也使用ChatMessage类
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
         MessageType.LIST_USERS_REQUEST: ListUsersRequest,
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,

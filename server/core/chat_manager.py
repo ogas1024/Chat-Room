@@ -92,13 +92,13 @@ class ChatManager:
         history_messages = []
         for msg_data in history_data:
             message = ChatMessage(
+                message_type=MessageType.CHAT_HISTORY,  # 设置为历史消息类型
                 message_id=msg_data['id'],
                 sender_id=msg_data['sender_id'],
                 sender_username=msg_data['sender_username'],
                 chat_group_id=group_id,
                 chat_group_name="",  # 可以后续填充
                 content=msg_data['content'],
-                message_type=msg_data.get('message_type', 'text'),
                 timestamp=msg_data['timestamp']
             )
             history_messages.append(message)
