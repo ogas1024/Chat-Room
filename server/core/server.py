@@ -266,6 +266,14 @@ class ChatRoomServer:
 
             # 自动进入公频聊天组
             public_chat_id = self.chat_manager.get_public_chat_id()
+
+            # 确保用户是public聊天组的成员
+            if not self.chat_manager.db.is_user_in_chat_group(public_chat_id, user_info['id']):
+                try:
+                    self.chat_manager.db.add_user_to_chat_group(public_chat_id, user_info['id'])
+                except Exception as e:
+                    print(f"警告：用户 {user_info['username']} 加入public聊天组失败: {e}")
+
             self.user_manager.set_user_current_chat(user_info['id'], public_chat_id)
 
             # 获取公频聊天组信息

@@ -37,11 +37,21 @@ class UserManager:
             except UserNotFoundError:
                 # 用户不存在，可以注册
                 pass
-            
+
             # 创建新用户
             user_id = self.db.create_user(username, password)
+
+            # 自动将新用户加入public聊天组
+            from shared.constants import DEFAULT_PUBLIC_CHAT
+            try:
+                public_group = self.db.get_chat_group_by_name(DEFAULT_PUBLIC_CHAT)
+                self.db.add_user_to_chat_group(public_group['id'], user_id)
+            except Exception as e:
+                # 如果加入public聊天组失败，记录错误但不影响注册
+                print(f"警告：新用户 {username} 加入public聊天组失败: {e}")
+
             return user_id
-            
+
         except DatabaseError as e:
             if "已存在" in str(e):
                 raise UserAlreadyExistsError(username)
