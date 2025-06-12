@@ -481,7 +481,7 @@ class ChatClient:
             group_name: 聊天组名称
             member_usernames: 初始成员用户名列表
         """
-        from shared.messages import BaseMessage
+        from shared.messages import CreateChatRequest
         from shared.constants import MessageType
 
         if not self.is_logged_in():
@@ -491,9 +491,8 @@ class ChatClient:
             return False, "未连接到服务器"
 
         # 发送创建聊天组请求
-        request = BaseMessage(
-            message_type=MessageType.CREATE_CHAT_REQUEST,
-            group_name=group_name,
+        request = CreateChatRequest(
+            chat_name=group_name,
             member_usernames=member_usernames or []
         )
         if not self.network_client.send_message(request):

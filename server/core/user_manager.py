@@ -142,15 +142,27 @@ class UserManager:
             for user in users_data
         ]
     
+    def get_chat_group_users(self, chat_group_id: int) -> List[UserInfo]:
+        """获取聊天组成员列表"""
+        members_data = self.db.get_chat_group_members(chat_group_id)
+        return [
+            UserInfo(
+                user_id=member['id'],
+                username=member['username'],
+                is_online=bool(member['is_online'])
+            )
+            for member in members_data
+        ]
+
     def get_user_info(self, user_id: int) -> Dict:
         """获取用户详细信息"""
         user_info = self.db.get_user_by_id(user_id)
-        
+
         # 获取统计信息
         user_chats = self.db.get_user_chat_groups(user_id)
         private_chats = [chat for chat in user_chats if chat['is_private_chat']]
         group_chats = [chat for chat in user_chats if not chat['is_private_chat']]
-        
+
         return {
             'user_info': UserInfo(
                 user_id=user_info['id'],

@@ -34,10 +34,10 @@ from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, ChatMessage, SystemMessage,
     ErrorMessage, UserInfoResponse, ListUsersRequest, ListUsersResponse,
-    ListChatsRequest, ListChatsResponse, CreateChatRequest, JoinChatRequest,
-    FileInfo, FileUploadRequest, FileUploadResponse, FileDownloadRequest,
-    FileDownloadResponse, FileListRequest, FileListResponse, EnterChatRequest,
-    AIChatRequest, AIChatResponse
+    ListChatsRequest, ListChatsResponse, CreateChatRequest, CreateChatResponse,
+    JoinChatRequest, FileInfo, FileUploadRequest, FileUploadResponse,
+    FileDownloadRequest, FileDownloadResponse, FileListRequest, FileListResponse,
+    EnterChatRequest, AIChatRequest, AIChatResponse
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
@@ -514,12 +514,16 @@ class ChatRoomServer:
                     return
 
             # 创建聊天组
-            self.chat_manager.create_chat_group(
+            group_id = self.chat_manager.create_chat_group(
                 chat_name, user_info['user_id'], member_ids
             )
 
             # 发送成功响应
-            response = SystemMessage(content=f"聊天组 '{chat_name}' 创建成功")
+            response = CreateChatResponse(
+                success=True,
+                chat_group_id=group_id,
+                chat_name=chat_name
+            )
             self.send_message(client_socket, response)
 
         except Exception as e:
