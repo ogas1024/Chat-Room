@@ -314,6 +314,9 @@ conversations/
 test_output/
 test_results/
 
+# 归档目录（临时文件和调试文件）
+archive/
+
 # 性能分析文件
 *.prof
 *.profile

@@ -34,12 +34,12 @@ Chat-Room是一个功能完整的聊天室应用，使用Socket进行网络通�
 Chat-Room/
 ├── client/                 # 客户端代码
 │   ├── main.py            # 客户端入口程序
-│   ├── ui/                # TUI界面模块 (待实现)
-│   ├── network/           # 网络通信模块
+│   ├── ui/                # TUI界面模块
+│   ├── core/              # 核心通信模块
 │   │   └── client.py      # Socket客户端和高级封装
 │   ├── commands/          # 命令处理模块
 │   │   └── parser.py      # 命令解析和处理器
-│   └── utils/             # 客户端工具模块 (待实现)
+│   └── config/            # 客户端配置模块
 ├── server/                # 服务器端代码
 │   ├── main.py           # 服务器入口程序
 │   ├── core/             # 核心业务逻辑
@@ -51,16 +51,36 @@ Chat-Room/
 │   │   └── connection.py # 数据库连接管理
 │   ├── utils/            # 服务器工具模块
 │   │   └── auth.py       # 认证和验证工具
-│   └── ai/              # AI集成模块 (待实现)
+│   ├── ai/              # AI集成模块
+│   ├── config/          # 服务器配置模块
+│   └── data/            # 数据存储目录
 ├── shared/              # 共享模块
 │   ├── constants.py     # 全局常量定义
 │   ├── messages.py      # 消息协议和数据结构
-│   └── exceptions.py    # 自定义异常类
-├── tests/               # 测试代码 (待实现)
+│   ├── exceptions.py    # 自定义异常类
+│   ├── logger.py        # 日志系统
+│   ├── protocol.py      # 通信协议
+│   └── config_manager.py # 配置管理器
+├── config/              # 配置文件目录
+│   ├── server_config.yaml # 服务器配置
+│   ├── client_config.yaml # 客户端配置
+│   ├── templates/       # 配置模板
+│   └── examples/        # 配置示例
+├── test/                # 正式测试代码
+│   ├── unit/            # 单元测试
+│   ├── integration/     # 集成测试
+│   ├── fixtures/        # 测试数据
+│   └── utils/           # 测试工具
 ├── docs/                # 项目文档
-│   ├── Design-v03.md    # 设计文档
-│   ├── API.md           # API文档 (待创建)
-│   └── Development.md   # 开发指南 (待创建)
+│   ├── design/          # 设计文档
+│   ├── guides/          # 使用指南
+│   └── api/             # API文档
+├── demo/                # 演示代码
+├── tools/               # 开发工具
+├── logs/                # 日志文件目录
+├── archive/             # 归档文件（临时文件和调试脚本）
+├── main.py              # 项目主入口
+├── package.json         # 项目元数据
 └── requirements.txt     # 项目依赖
 ```
 
@@ -337,13 +357,17 @@ git commit -m "[文档]: 更新API文档和使用说明"
 ### 项目结构说明
 
 #### 模块职责划分
-- **shared/**: 客户端和服务器共享的代码
-- **server/core/**: 服务器核心业务逻辑
-- **server/database/**: 数据库相关操作
-- **server/utils/**: 服务器工具函数
-- **client/network/**: 客户端网络通信
-- **client/commands/**: 客户端命令处理
-- **client/ui/**: 客户端界面（待实现）
+- **shared/**: 客户端和服务器共享的代码（协议、常量、异常等）
+- **server/core/**: 服务器核心业务逻辑（用户管理、聊天管理）
+- **server/database/**: 数据库相关操作（模型、连接管理）
+- **server/utils/**: 服务器工具函数（认证、验证等）
+- **server/ai/**: AI集成模块（智谱AI接口）
+- **client/core/**: 客户端核心通信模块（Socket客户端）
+- **client/commands/**: 客户端命令处理（命令解析器）
+- **client/ui/**: 客户端TUI界面（Textual界面）
+- **config/**: 配置文件管理（YAML配置文件）
+- **test/**: 正式测试代码（单元测试、集成测试）
+- **archive/**: 归档文件（临时文件、调试脚本、过时文档）
 
 #### 依赖关系
 - **shared模块**: 不依赖其他模块
