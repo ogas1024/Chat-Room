@@ -271,8 +271,8 @@ class ChatRoomApp(App):
                             self.current_chat = self.chat_client.current_chat_group['name']
                         self.update_status_area()
 
-                        # 设置定时器检测历史消息加载完成
-                        self.set_timer(3.0, self.finish_history_loading)
+                        # 不再使用定时器，完全依赖CHAT_HISTORY_COMPLETE通知来完成历史消息加载
+                        # 历史消息加载完成将由handle_chat_history_complete方法处理
                     # 如果是列表命令，更新状态区域
                     elif command.startswith('/list'):
                         self.update_status_area_with_list_result(command, message)
