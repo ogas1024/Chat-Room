@@ -37,7 +37,7 @@ from shared.messages import (
     ListChatsRequest, ListChatsResponse, CreateChatRequest, CreateChatResponse,
     JoinChatRequest, FileInfo, FileUploadRequest, FileUploadResponse,
     FileDownloadRequest, FileDownloadResponse, FileListRequest, FileListResponse,
-    EnterChatRequest, AIChatRequest, AIChatResponse
+    EnterChatRequest, EnterChatResponse, AIChatRequest, AIChatResponse
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
@@ -576,10 +576,14 @@ class ChatRoomServer:
                 return
 
             # 进入聊天组
-            self.chat_manager.enter_chat_group(chat_name, user_info['user_id'])
+            group_info = self.chat_manager.enter_chat_group(chat_name, user_info['user_id'])
 
             # 发送成功响应
-            response = SystemMessage(content=f"已进入聊天组 '{chat_name}'")
+            response = EnterChatResponse(
+                success=True,
+                chat_group_id=group_info['id'],
+                chat_name=group_info['name']
+            )
             self.send_message(client_socket, response)
 
         except ChatGroupNotFoundError as e:

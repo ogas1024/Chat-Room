@@ -355,9 +355,8 @@ class DatabaseManager:
                 LEFT JOIN group_members gm ON cg.id = gm.group_id
                 WHERE cg.is_private_chat = 0
                 GROUP BY cg.id, cg.name, cg.is_private_chat, cg.created_at
-                HAVING COUNT(gm.user_id) > 2 OR cg.name = ?
                 ORDER BY cg.name
-            ''', (DEFAULT_PUBLIC_CHAT,))
+            ''')
             return [dict(row) for row in cursor.fetchall()]
 
     def get_total_chat_groups_count(self) -> int:
