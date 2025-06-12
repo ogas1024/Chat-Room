@@ -597,12 +597,28 @@ class ChatRoomServer:
                     # 历史消息的类型已经在创建时设置为CHAT_HISTORY
                     self.send_message(client_socket, history_msg)
 
+                # 发送历史消息加载完成通知
+                from shared.messages import ChatHistoryComplete
+                complete_notification = ChatHistoryComplete(
+                    chat_group_id=group_info['id'],
+                    message_count=len(history_messages)
+                )
+                self.send_message(client_socket, complete_notification)
+
             except Exception as e:
                 # 历史消息加载失败不影响进入聊天组的成功
                 self.logger.warning("加载聊天历史失败",
                                   user_id=user_info['user_id'],
                                   chat_group_id=group_info['id'],
                                   error=str(e))
+
+                # 即使加载失败，也要发送完成通知（消息数量为0）
+                from shared.messages import ChatHistoryComplete
+                complete_notification = ChatHistoryComplete(
+                    chat_group_id=group_info['id'],
+                    message_count=0
+                )
+                self.send_message(client_socket, complete_notification)
 
         except ChatGroupNotFoundError as e:
             self.send_error(client_socket, ErrorCode.CHAT_NOT_FOUND, str(e))

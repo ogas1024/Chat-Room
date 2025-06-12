@@ -203,6 +203,9 @@ class ChatRoomApp(App):
             MessageType.CHAT_HISTORY, self.handle_chat_history
         )
         self.chat_client.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY_COMPLETE, self.handle_chat_history_complete
+        )
+        self.chat_client.network_client.set_message_handler(
             MessageType.SYSTEM_MESSAGE, self.handle_system_message
         )
         self.chat_client.network_client.set_message_handler(
@@ -655,6 +658,22 @@ class ChatRoomApp(App):
 
         # 计数历史消息
         self.on_history_message_received()
+
+    def handle_chat_history_complete(self, message):
+        """处理历史消息加载完成通知"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.chat_client or not self.chat_client.current_chat_group:
+            return
+
+        current_group_id = self.chat_client.current_chat_group['id']
+        if message.chat_group_id != current_group_id:
+            return
+
+        # 完成历史消息加载
+        self.finish_history_loading()
 
     def handle_system_message(self, message):
         """处理系统消息"""

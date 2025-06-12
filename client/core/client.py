@@ -219,6 +219,9 @@ class ChatClient:
             MessageType.CHAT_HISTORY, self._handle_chat_history
         )
         self.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY_COMPLETE, self._handle_chat_history_complete
+        )
+        self.network_client.set_message_handler(
             MessageType.ERROR_MESSAGE, self._handle_error_message
         )
         self.network_client.set_message_handler(
@@ -358,7 +361,22 @@ class ChatClient:
 
         # 历史消息的默认处理（可以被上层应用覆盖）
         print(f"[历史] [{message.sender_username}]: {message.content}")
-    
+
+    def _handle_chat_history_complete(self, message):
+        """处理历史消息加载完成通知"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.current_chat_group:
+            return
+
+        if message.chat_group_id != self.current_chat_group['id']:
+            return
+
+        # 历史消息加载完成的默认处理（可以被上层应用覆盖）
+        print(f"[系统] 历史消息加载完成，共 {message.message_count} 条消息")
+
     def _handle_error_message(self, message):
         """处理错误消息"""
         print(f"错误: {message.error_message}")

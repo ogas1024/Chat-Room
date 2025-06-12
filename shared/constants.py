@@ -31,6 +31,7 @@ class MessageType:
     # 聊天相关
     CHAT_MESSAGE = "chat_message"
     CHAT_HISTORY = "chat_history"
+    CHAT_HISTORY_COMPLETE = "chat_history_complete"  # 历史消息加载完成通知
     USER_STATUS_UPDATE = "user_status_update"
     
     # 聊天组相关

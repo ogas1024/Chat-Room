@@ -378,6 +378,14 @@ class AIChatResponse(BaseMessage):
     error_message: Optional[str] = None
 
 
+@dataclass
+class ChatHistoryComplete(BaseMessage):
+    """历史消息加载完成通知"""
+    message_type: str = MessageType.CHAT_HISTORY_COMPLETE
+    chat_group_id: int = 0
+    message_count: int = 0  # 加载的历史消息数量
+
+
 def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
     """根据消息类型创建对应的消息对象"""
     message_type = data.get('message_type')
@@ -389,6 +397,7 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.REGISTER_RESPONSE: RegisterResponse,
         MessageType.CHAT_MESSAGE: ChatMessage,
         MessageType.CHAT_HISTORY: ChatMessage,  # 历史消息也使用ChatMessage类
+        MessageType.CHAT_HISTORY_COMPLETE: ChatHistoryComplete,  # 历史消息加载完成通知
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
         MessageType.LIST_USERS_REQUEST: ListUsersRequest,
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,
