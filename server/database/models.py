@@ -112,9 +112,12 @@ class DatabaseManager:
             ''')
             
             conn.commit()
-            
+
             # 创建默认公频聊天组
             self._create_default_public_chat(conn)
+
+            # 创建AI用户
+            self._create_ai_user(conn)
     
     def _create_default_public_chat(self, conn: sqlite3.Connection):
         """创建默认的公频聊天组"""
@@ -129,6 +132,37 @@ class DatabaseManager:
                 (DEFAULT_PUBLIC_CHAT, ChatType.GROUP_CHAT)
             )
             conn.commit()
+
+    def _create_ai_user(self, conn: sqlite3.Connection):
+        """创建AI用户"""
+        from shared.constants import AI_USER_ID, AI_USERNAME
+
+        cursor = conn.cursor()
+
+        # 检查AI用户是否已存在
+        cursor.execute("SELECT id FROM users WHERE id = ?", (AI_USER_ID,))
+        if cursor.fetchone():
+            return  # AI用户已存在
+
+        # 创建AI用户，使用特殊的ID
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (id, username, password_hash, is_online) VALUES (?, ?, ?, ?)",
+            (AI_USER_ID, AI_USERNAME, "ai_user_no_password", 1)  # AI用户始终在线
+        )
+
+        # 将AI用户添加到所有聊天组
+        cursor.execute("SELECT id FROM chat_groups")
+        chat_groups = cursor.fetchall()
+
+        for group in chat_groups:
+            group_id = group[0]
+            cursor.execute(
+                "INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)",
+                (group_id, AI_USER_ID)
+            )
+
+        conn.commit()
+        print(f"✅ AI用户 '{AI_USERNAME}' 已创建并加入所有聊天组")
     
     @staticmethod
     def hash_password(password: str) -> str:

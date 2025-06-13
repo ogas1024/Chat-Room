@@ -21,15 +21,24 @@ class ChatManager:
         self.db = get_db()
         self.user_manager = user_manager
     
-    def create_chat_group(self, name: str, creator_id: int, 
+    def create_chat_group(self, name: str, creator_id: int,
                          initial_members: List[int] = None,
                          is_private_chat: bool = False) -> int:
         """创建聊天组"""
+        from shared.constants import AI_USER_ID
+
         # 创建聊天组
         group_id = self.db.create_chat_group(name, is_private_chat)
-        
+
         # 添加创建者到聊天组
         self.db.add_user_to_chat_group(group_id, creator_id)
+
+        # 自动添加AI用户到所有聊天组（除了私聊）
+        if not is_private_chat:
+            try:
+                self.db.add_user_to_chat_group(group_id, AI_USER_ID)
+            except Exception as e:
+                print(f"警告：无法将AI用户添加到聊天组 {name}: {e}")
 
         # 添加初始成员
         # 对于私聊：自动添加所有初始成员
@@ -46,7 +55,7 @@ class ChatManager:
                     except:
                         # 忽略不存在的用户
                         pass
-        
+
         return group_id
     
     def join_chat_group(self, group_name: str, user_id: int) -> Dict:
@@ -107,17 +116,25 @@ class ChatManager:
     
     def send_message(self, sender_id: int, group_id: int, content: str) -> ChatMessage:
         """发送消息"""
-        # 验证用户是否在聊天组中
-        if not self.db.is_user_in_chat_group(group_id, sender_id):
-            raise PermissionDeniedError("您不在此聊天组中")
-        
+        from shared.constants import AI_USER_ID
+
+        # AI用户特殊处理：确保AI用户在所有聊天组中
+        if sender_id == AI_USER_ID:
+            # 确保AI用户在该聊天组中
+            if not self.db.is_user_in_chat_group(group_id, sender_id):
+                self.db.add_user_to_chat_group(group_id, sender_id)
+        else:
+            # 普通用户需要验证权限
+            if not self.db.is_user_in_chat_group(group_id, sender_id):
+                raise PermissionDeniedError("您不在此聊天组中")
+
         # 获取发送者和聊天组信息
         sender_info = self.db.get_user_by_id(sender_id)
         group_info = self.db.get_chat_group_by_id(group_id)
-        
+
         # 保存消息到数据库
         message_id = self.db.save_message(group_id, sender_id, content)
-        
+
         # 创建消息对象
         message = ChatMessage(
             message_id=message_id,
@@ -127,7 +144,7 @@ class ChatManager:
             chat_group_name=group_info['name'],
             content=content
         )
-        
+
         return message
     
     def broadcast_message_to_group(self, message: ChatMessage):
