@@ -808,8 +808,19 @@ class ChatClient:
             if response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
                 if hasattr(response, 'success') and response.success:
                     # 服务器开始发送文件，接收文件数据
-                    filename = response.filename if hasattr(response, 'filename') else f"file_{file_id}"
+                    filename = response.filename if hasattr(response, 'filename') and response.filename else f"file_{file_id}"
                     file_size = response.file_size if hasattr(response, 'file_size') else 0
+
+                    # 验证文件名有效性
+                    if not filename or filename.strip() == "":
+                        filename = f"file_{file_id}"
+
+                    # 清理文件名中的路径分隔符，防止路径注入
+                    # 处理不同操作系统的路径分隔符
+                    filename = filename.strip().replace('\\', '/')
+                    filename = os.path.basename(filename)
+                    if not filename:
+                        filename = f"file_{file_id}"
 
                     # 确定保存路径
                     if not save_path:
@@ -818,6 +829,10 @@ class ChatClient:
                         download_dir = os.path.join("client", "Downloads", username)
                         os.makedirs(download_dir, exist_ok=True)
                         save_path = os.path.join(download_dir, filename)
+
+                    # 验证保存路径不是目录
+                    if os.path.isdir(save_path):
+                        return False, f"保存路径是目录而非文件: {save_path}"
 
                     # 接收文件数据
                     return self._receive_file_data(save_path, file_size, filename)
@@ -832,6 +847,22 @@ class ChatClient:
         """接收文件数据并保存到本地"""
         import os
         from shared.constants import FILE_CHUNK_SIZE, MessageType
+
+        # 验证保存路径
+        if not save_path or save_path.strip() == "":
+            return False, "保存路径为空"
+
+        # 确保保存路径不是目录
+        if os.path.isdir(save_path):
+            return False, f"保存路径是目录而非文件: {save_path}"
+
+        # 确保父目录存在
+        parent_dir = os.path.dirname(save_path)
+        if parent_dir and not os.path.exists(parent_dir):
+            try:
+                os.makedirs(parent_dir, exist_ok=True)
+            except Exception as e:
+                return False, f"创建父目录失败: {e}"
 
         try:
             received_size = 0

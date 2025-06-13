@@ -1,5 +1,0 @@
-# 忽略Downloads目录中的所有下载文件
-*
-
-# 但保留.gitignore文件本身
-!.gitignore

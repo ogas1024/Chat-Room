@@ -2,11 +2,12 @@
 
 ## 🔧 修复概述
 
-本次修复解决了Chat-Room项目中文件传输功能的三个关键问题：
+本次修复解决了Chat-Room项目中文件传输功能的四个关键问题：
 
 1. **文件上传失败** - 消息协议不匹配问题
 2. **文件下载功能逻辑错误** - 命令参数类型不匹配
 3. **文件存储结构异常** - 数据库记录与实际文件不一致
+4. **文件下载路径错误** - 路径构建和验证问题
 
 ## 📋 具体修复内容
 
@@ -102,7 +103,41 @@ except Exception:
     return
 ```
 
-### 6. 清理无效数据库记录
+### 6. 修复文件下载路径问题
+
+**问题**: 文件下载时出现 `[Errno 21] Is a directory` 错误，路径构建逻辑有缺陷。
+
+**修复**: 在`client/core/client.py`中增强路径处理逻辑：
+
+```python
+# 验证文件名有效性
+if not filename or filename.strip() == "":
+    filename = f"file_{file_id}"
+
+# 清理文件名中的路径分隔符，防止路径注入
+filename = filename.strip().replace('\\', '/')
+filename = os.path.basename(filename)
+if not filename:
+    filename = f"file_{file_id}"
+
+# 验证保存路径不是目录
+if os.path.isdir(save_path):
+    return False, f"保存路径是目录而非文件: {save_path}"
+```
+
+并在`_receive_file_data`方法中添加额外验证：
+
+```python
+# 验证保存路径
+if not save_path or save_path.strip() == "":
+    return False, "保存路径为空"
+
+# 确保保存路径不是目录
+if os.path.isdir(save_path):
+    return False, f"保存路径是目录而非文件: {save_path}"
+```
+
+### 7. 清理无效数据库记录
 
 **问题**: 数据库中存在指向不存在文件的记录。
 

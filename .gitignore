@@ -274,6 +274,9 @@ media/
 static/uploads/
 server/data
 
+# 用户下载的文件
+client/Downloads/
+
 # 临时文件和缓存
 tmp/
 temp/
