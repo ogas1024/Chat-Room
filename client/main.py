@@ -44,6 +44,10 @@ class SimpleChatClient:
         self.running = False
         self.current_state = "disconnected"  # disconnected, connected, logged_in
 
+        # 历史消息收集器
+        self.history_messages = []
+        self.current_chat_group_id = None
+
         # 设置Simple模式的消息处理器
         self._setup_simple_message_handlers()
 
@@ -67,7 +71,7 @@ class SimpleChatClient:
         )
 
     def _handle_simple_chat_history(self, message):
-        """处理Simple模式的历史聊天消息"""
+        """处理Simple模式的历史聊天消息 - 收集消息而不是立即输出"""
         try:
             # 验证消息是否属于当前聊天组
             if not hasattr(message, 'chat_group_id'):
@@ -79,40 +83,103 @@ class SimpleChatClient:
             if message.chat_group_id != self.chat_client.current_chat_group['id']:
                 return
 
-            # 简化时间戳处理
+            # 如果是新的聊天组，清空历史消息收集器
+            if self.current_chat_group_id != message.chat_group_id:
+                self.history_messages = []
+                self.current_chat_group_id = message.chat_group_id
+
+            # 格式化时间戳
             timestamp_str = ""
             if hasattr(message, 'timestamp') and message.timestamp:
                 try:
-                    if isinstance(message.timestamp, str) and len(message.timestamp) > 10:
-                        time_part = message.timestamp.split(' ')[-1][:8]
-                        timestamp_str = f"[{time_part}]"
-                    else:
-                        timestamp_str = f"[{str(message.timestamp)[:8]}]"
-                except:
-                    timestamp_str = "[--:--:--]"
+                    # 尝试解析完整的时间戳格式
+                    from datetime import datetime
+                    from shared.constants import TIMESTAMP_FORMAT
 
-            # 使用sys.stdout强制输出，确保显示
-            import sys
-            output = f"📜 {timestamp_str} [{message.sender_username}]: {message.content}\n"
-            sys.stdout.write(output)
-            sys.stdout.flush()
+                    if isinstance(message.timestamp, str):
+                        try:
+                            # 尝试解析完整格式
+                            dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
+                            timestamp_str = dt.strftime("%a %b %d %I:%M:%S %p UTC %Y")
+                        except:
+                            # 如果解析失败，提取时间部分
+                            if len(message.timestamp) > 10:
+                                time_part = message.timestamp.split(' ')[-1][:8]
+                                timestamp_str = f"Today {time_part}"
+                            else:
+                                timestamp_str = str(message.timestamp)
+                    else:
+                        timestamp_str = str(message.timestamp)
+                except:
+                    timestamp_str = "Unknown time"
+
+            # 收集历史消息到列表中
+            formatted_message = {
+                'username': message.sender_username,
+                'timestamp': timestamp_str,
+                'content': message.content
+            }
+            self.history_messages.append(formatted_message)
 
         except Exception as e:
-            # 如果处理失败，显示错误信息
-            import sys
-            sys.stdout.write(f"📜 [ERROR]: 历史消息处理失败: {e}\n")
-            sys.stdout.flush()
+            # 如果处理失败，记录错误消息
+            error_message = {
+                'username': 'ERROR',
+                'timestamp': 'Unknown time',
+                'content': f'历史消息处理失败: {e}'
+            }
+            self.history_messages.append(error_message)
 
     def _handle_simple_chat_history_complete(self, message):
-        """处理Simple模式的历史消息加载完成"""
+        """处理Simple模式的历史消息加载完成 - 批量输出所有历史消息"""
         import sys
-        if hasattr(message, 'message_count'):
-            if message.message_count > 0:
-                sys.stdout.write(f"✅ 已加载 {message.message_count} 条历史消息\n")
+
+        try:
+            # 构建完整的输出字符串
+            output_lines = []
+
+            # 如果有历史消息，格式化并添加到输出中
+            if self.history_messages:
+                output_lines.append(f"✅ 已加载 {len(self.history_messages)} 条历史消息")
+                output_lines.append("")  # 空行分隔
+
+                # 按照指定格式添加每条历史消息
+                for msg in self.history_messages:
+                    output_lines.append(f"[{msg['username']}]    <{msg['timestamp']}>")
+                    output_lines.append(f">{msg['content']}")
+                    output_lines.append("")  # 消息间空行
+
+                # 移除最后一个空行
+                if output_lines and output_lines[-1] == "":
+                    output_lines.pop()
             else:
-                sys.stdout.write("✅ 暂无历史消息\n")
-        sys.stdout.write("-" * 50 + "\n")
-        sys.stdout.flush()
+                # 检查服务器报告的消息数量
+                if hasattr(message, 'message_count') and message.message_count > 0:
+                    output_lines.append(f"⚠️ 服务器报告有 {message.message_count} 条历史消息，但客户端未收到")
+                else:
+                    output_lines.append("✅ 暂无历史消息")
+
+            # 添加分隔线
+            output_lines.append("-" * 50)
+
+            # 一次性输出所有内容
+            complete_output = "\n".join(output_lines) + "\n"
+            sys.stdout.write(complete_output)
+            sys.stdout.flush()
+
+            # 清空历史消息收集器，为下次使用做准备
+            self.history_messages = []
+
+        except Exception as e:
+            # 如果批量输出失败，使用简单输出
+            sys.stdout.write(f"❌ 历史消息批量输出失败: {e}\n")
+            if hasattr(message, 'message_count'):
+                sys.stdout.write(f"✅ 已加载 {message.message_count} 条历史消息\n")
+            sys.stdout.write("-" * 50 + "\n")
+            sys.stdout.flush()
+
+            # 清空历史消息收集器
+            self.history_messages = []
 
     def _handle_simple_chat_message(self, message):
         """处理Simple模式的实时聊天消息"""
