@@ -485,3 +485,31 @@ class DatabaseManager:
                 WHERE id = ?
             ''', (message_id, file_id))
             conn.commit()
+
+    def update_file_server_path(self, file_id: int, server_filepath: str):
+        """更新文件元数据中的服务器路径"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE files_metadata
+                SET server_filepath = ?
+                WHERE id = ?
+            ''', (server_filepath, file_id))
+            conn.commit()
+
+    def get_file_by_name_and_group(self, filename: str, chat_group_id: int) -> Dict[str, Any]:
+        """根据文件名和聊天组ID获取文件元数据"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT fm.*, u.username as uploader_username
+                FROM files_metadata fm
+                JOIN users u ON fm.uploader_id = u.id
+                WHERE fm.original_filename = ? AND fm.chat_group_id = ?
+                ORDER BY fm.upload_timestamp DESC
+                LIMIT 1
+            ''', (filename, chat_group_id))
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            raise DatabaseError(f"文件 '{filename}' 在聊天组 {chat_group_id} 中不存在")

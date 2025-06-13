@@ -738,18 +738,52 @@ class ChatClient:
         if response:
             if response.message_type == MessageType.FILE_UPLOAD_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    return True, f"文件 '{filename}' 上传成功"
+                    # 服务器准备接收文件，开始发送文件数据
+                    return self._send_file_data(file_path, filename)
                 else:
-                    return False, response.error_message or "文件上传失败"
+                    return False, response.message or "文件上传失败"
             elif hasattr(response, 'error_message'):
                 return False, response.error_message
 
         return False, "服务器无响应"
 
+    def _send_file_data(self, file_path: str, filename: str) -> tuple[bool, str]:
+        """发送文件数据到服务器"""
+        from shared.constants import FILE_CHUNK_SIZE, MessageType
+
+        try:
+            with open(file_path, 'rb') as f:
+                while True:
+                    data = f.read(FILE_CHUNK_SIZE)
+                    if not data:
+                        break
+                    self.network_client.socket.send(data)
+
+            # 等待上传完成响应
+            response = self.network_client.wait_for_response(
+                timeout=30.0,
+                message_types=[MessageType.FILE_UPLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+            )
+
+            if response:
+                if response.message_type == MessageType.FILE_UPLOAD_RESPONSE:
+                    if hasattr(response, 'success') and response.success:
+                        return True, f"文件 '{filename}' 上传成功"
+                    else:
+                        return False, response.message or "文件上传失败"
+                elif hasattr(response, 'error_message'):
+                    return False, response.error_message
+
+            return False, "服务器无响应"
+
+        except Exception as e:
+            return False, f"文件发送失败: {str(e)}"
+
     def download_file(self, file_id: int, save_path: str = None) -> tuple[bool, str]:
         """下载文件"""
+        import os
         from shared.messages import FileDownloadRequest
-        from shared.constants import MessageType
+        from shared.constants import MessageType, FILE_CHUNK_SIZE
 
         if not self.is_logged_in():
             return False, "请先登录"
@@ -773,13 +807,97 @@ class ChatClient:
         if response:
             if response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    return True, f"文件下载成功: {response.file_path if hasattr(response, 'file_path') else save_path}"
+                    # 服务器开始发送文件，接收文件数据
+                    filename = response.filename if hasattr(response, 'filename') else f"file_{file_id}"
+                    file_size = response.file_size if hasattr(response, 'file_size') else 0
+
+                    # 确定保存路径
+                    if not save_path:
+                        # 使用默认下载目录: client/Downloads/$username/
+                        username = self.user_info['username'] if self.user_info else 'unknown'
+                        download_dir = os.path.join("client", "Downloads", username)
+                        os.makedirs(download_dir, exist_ok=True)
+                        save_path = os.path.join(download_dir, filename)
+
+                    # 接收文件数据
+                    return self._receive_file_data(save_path, file_size, filename)
                 else:
-                    return False, response.error_message or "文件下载失败"
+                    return False, response.message or "文件下载失败"
             elif hasattr(response, 'error_message'):
                 return False, response.error_message
 
         return False, "服务器无响应"
+
+    def _receive_file_data(self, save_path: str, file_size: int, filename: str) -> tuple[bool, str]:
+        """接收文件数据并保存到本地"""
+        import os
+        from shared.constants import FILE_CHUNK_SIZE, MessageType
+
+        try:
+            received_size = 0
+            with open(save_path, 'wb') as f:
+                while received_size < file_size:
+                    # 计算本次接收的数据大小
+                    chunk_size = min(FILE_CHUNK_SIZE, file_size - received_size)
+
+                    # 接收数据
+                    data = self.network_client.socket.recv(chunk_size)
+                    if not data:
+                        break
+
+                    f.write(data)
+                    received_size += len(data)
+
+            # 验证文件大小
+            if received_size != file_size:
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                return False, "文件传输不完整"
+
+            # 等待下载完成响应
+            response = self.network_client.wait_for_response(
+                timeout=10.0,
+                message_types=[MessageType.FILE_DOWNLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+            )
+
+            if response and response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, f"文件 '{filename}' 下载成功，保存到: {save_path}"
+                else:
+                    return False, response.message or "文件下载失败"
+
+            return True, f"文件 '{filename}' 下载成功，保存到: {save_path}"
+
+        except Exception as e:
+            if os.path.exists(save_path):
+                os.remove(save_path)
+            return False, f"文件接收失败: {str(e)}"
+
+    def download_file_by_name(self, filename: str, save_path: str = None) -> tuple[bool, str]:
+        """根据文件名下载文件"""
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.current_chat_group:
+            return False, "请先进入聊天组"
+
+        # 先获取文件列表，找到对应的文件ID
+        success, message, files = self.list_files()
+        if not success:
+            return False, f"获取文件列表失败: {message}"
+
+        # 查找匹配的文件
+        matching_file = None
+        for file_info in files:
+            if file_info['original_filename'] == filename:
+                matching_file = file_info
+                break
+
+        if not matching_file:
+            return False, f"文件 '{filename}' 不存在"
+
+        # 使用文件ID下载
+        return self.download_file(matching_file['file_id'], save_path)
 
     def send_ai_request(self, command: str, message: str = None,
                        chat_group_id: int = None) -> tuple[bool, str]:

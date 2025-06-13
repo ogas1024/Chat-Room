@@ -741,9 +741,15 @@ class ChatRoomServer:
                 self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您不在此聊天组中")
                 return
 
-            # 生成唯一的服务器文件名
-            unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            server_filepath = os.path.join(FILES_STORAGE_PATH, str(chat_group_id), unique_filename)
+            # 先保存文件元数据获取file_id，然后使用file_id作为文件名
+            # 临时保存文件元数据以获取file_id
+            temp_file_id = self.chat_manager.db.save_file_metadata(
+                filename, "", file_size, user_info['user_id'], chat_group_id
+            )
+
+            # 使用file_id作为服务器文件名
+            server_filename = str(temp_file_id)
+            server_filepath = os.path.join(FILES_STORAGE_PATH, str(chat_group_id), server_filename)
 
             # 确保目录存在
             os.makedirs(os.path.dirname(server_filepath), exist_ok=True)
@@ -757,7 +763,7 @@ class ChatRoomServer:
 
             # 接收文件数据
             self._receive_file_data(client_socket, server_filepath, file_size,
-                                  filename, user_info['user_id'], chat_group_id)
+                                  filename, user_info['user_id'], chat_group_id, temp_file_id)
 
         except Exception as e:
             print(f"文件上传请求处理错误: {e}")
@@ -765,7 +771,7 @@ class ChatRoomServer:
 
     def _receive_file_data(self, client_socket: socket.socket, server_filepath: str,
                           file_size: int, original_filename: str, uploader_id: int,
-                          chat_group_id: int):
+                          chat_group_id: int, file_id: int):
         """接收文件数据"""
         try:
             received_size = 0
@@ -788,11 +794,8 @@ class ChatRoomServer:
                 self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件传输不完整")
                 return
 
-            # 保存文件元数据到数据库
-            file_id = self.chat_manager.db.save_file_metadata(
-                original_filename, server_filepath, file_size,
-                uploader_id, chat_group_id
-            )
+            # 更新文件元数据中的服务器路径
+            self.chat_manager.db.update_file_server_path(file_id, server_filepath)
 
             # 创建文件通知消息
             uploader_username = self.user_manager.db.get_user_by_id(uploader_id)['username']
