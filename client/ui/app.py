@@ -125,6 +125,10 @@ class ChatRoomApp(App):
         self.register_mode = False  # 是否处于注册模式
         self.login_step = 0  # 登录步骤：0=用户名，1=密码
         self.temp_username = ""  # 临时存储用户名
+
+        # 历史消息收集器（类似Simple模式）
+        self.history_messages = []
+        self.current_chat_group_id = None
     
     def compose(self) -> ComposeResult:
         """构建UI布局"""
@@ -639,67 +643,129 @@ class ChatRoomApp(App):
         )
 
     def handle_chat_history(self, message):
-        """处理历史聊天消息"""
-        # 验证消息是否属于当前聊天组
-        if not hasattr(message, 'chat_group_id'):
-            return
+        """处理历史聊天消息 - 收集消息而不是立即显示"""
+        try:
+            # 验证消息是否属于当前聊天组
+            if not hasattr(message, 'chat_group_id'):
+                return
 
-        if not self.chat_client or not self.chat_client.current_chat_group:
-            return
+            if not self.chat_client or not self.chat_client.current_chat_group:
+                return
 
-        current_group_id = self.chat_client.current_chat_group['id']
-        if message.chat_group_id != current_group_id:
-            return
+            current_group_id = self.chat_client.current_chat_group['id']
+            if message.chat_group_id != current_group_id:
+                return
 
-        # 历史消息以特殊样式显示
-        is_self = (self.current_user and
-                  message.sender_username == self.current_user)
+            # 如果是新的聊天组，清空历史消息收集器
+            if self.current_chat_group_id != message.chat_group_id:
+                self.history_messages = []
+                self.current_chat_group_id = message.chat_group_id
 
-        # 格式化历史消息的时间戳
-        message_timestamp = None
-        if hasattr(message, 'timestamp') and message.timestamp:
-            try:
-                # 尝试解析时间戳并格式化为显示格式
-                from datetime import datetime
-                from shared.constants import TIMESTAMP_FORMAT, DISPLAY_TIME_FORMAT
+            # 格式化时间戳
+            timestamp_str = ""
+            if hasattr(message, 'timestamp') and message.timestamp:
+                try:
+                    # 尝试解析完整的时间戳格式
+                    from datetime import datetime
+                    from shared.constants import TIMESTAMP_FORMAT, DISPLAY_TIME_FORMAT
 
-                # 如果时间戳是字符串，解析它
-                if isinstance(message.timestamp, str):
-                    # 数据库时间戳格式：YYYY-MM-DD HH:MM:SS
-                    dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
-                else:
-                    dt = message.timestamp
+                    if isinstance(message.timestamp, str):
+                        try:
+                            # 尝试解析完整格式并转换为显示格式
+                            dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
+                            timestamp_str = dt.strftime(DISPLAY_TIME_FORMAT)
+                        except:
+                            # 如果解析失败，使用原始时间戳
+                            timestamp_str = str(message.timestamp)
+                    else:
+                        timestamp_str = str(message.timestamp)
+                except:
+                    timestamp_str = "Unknown time"
 
-                message_timestamp = dt.strftime(DISPLAY_TIME_FORMAT)
-            except Exception as e:
-                # 如果时间戳解析失败，使用当前时间
-                message_timestamp = None
+            # 判断是否是自己的消息
+            is_self = (self.current_user and
+                      message.sender_username == self.current_user)
 
-        self.add_history_message(
-            message.sender_username,
-            message.content,
-            is_self,
-            message_timestamp
-        )
+            # 收集历史消息到列表中
+            formatted_message = {
+                'username': message.sender_username,
+                'timestamp': timestamp_str,
+                'content': message.content,
+                'is_self': is_self
+            }
+            self.history_messages.append(formatted_message)
 
-        # 计数历史消息
-        self.on_history_message_received()
+            # 计数历史消息
+            self.on_history_message_received()
+
+        except Exception as e:
+            # 如果处理失败，记录错误消息
+            error_message = {
+                'username': 'ERROR',
+                'timestamp': 'Unknown time',
+                'content': f'历史消息处理失败: {e}',
+                'is_self': False
+            }
+            self.history_messages.append(error_message)
 
     def handle_chat_history_complete(self, message):
-        """处理历史消息加载完成通知"""
-        # 验证消息是否属于当前聊天组
-        if not hasattr(message, 'chat_group_id'):
-            return
+        """处理历史消息加载完成通知 - 批量显示所有历史消息"""
+        try:
+            # 验证消息是否属于当前聊天组
+            if not hasattr(message, 'chat_group_id'):
+                return
 
-        if not self.chat_client or not self.chat_client.current_chat_group:
-            return
+            if not self.chat_client or not self.chat_client.current_chat_group:
+                return
 
-        current_group_id = self.chat_client.current_chat_group['id']
-        if message.chat_group_id != current_group_id:
-            return
+            current_group_id = self.chat_client.current_chat_group['id']
+            if message.chat_group_id != current_group_id:
+                return
 
-        # 完成历史消息加载
-        self.finish_history_loading()
+            # 批量显示历史消息
+            if self.history_messages:
+                # 显示加载成功消息
+                self.add_system_message(f"✅ 已加载 {len(self.history_messages)} 条历史消息")
+
+                # 逐条显示历史消息（使用较淡样式）
+                for msg in self.history_messages:
+                    self.add_history_message(
+                        msg['username'],
+                        msg['content'],
+                        msg['is_self'],
+                        msg['timestamp']
+                    )
+
+                # 添加分隔线
+                self.add_system_message("-" * 50)
+            else:
+                # 检查服务器报告的消息数量
+                if hasattr(message, 'message_count') and message.message_count > 0:
+                    self.add_system_message(f"⚠️ 服务器报告有 {message.message_count} 条历史消息，但客户端未收到")
+                else:
+                    self.add_system_message("✅ 暂无历史消息")
+
+                # 添加分隔线
+                self.add_system_message("-" * 50)
+
+            # 清空历史消息收集器，为下次使用做准备
+            self.history_messages = []
+
+            # 完成历史消息加载状态
+            self.finish_history_loading()
+
+        except Exception as e:
+            # 如果批量显示失败，使用简单提示
+            self.add_error_message(f"❌ 历史消息批量显示失败: {e}")
+            if hasattr(message, 'message_count'):
+                self.add_system_message(f"✅ 已加载 {message.message_count} 条历史消息")
+            self.add_system_message("-" * 50)
+
+            # 清空历史消息收集器
+            self.history_messages = []
+
+            # 完成历史消息加载状态
+            self.finish_history_loading()
 
     def handle_system_message(self, message):
         """处理系统消息"""
@@ -752,6 +818,9 @@ class ChatRoomApp(App):
             # 设置一个标记，用于检测历史消息加载完成
             self.history_loading = True
             self.history_message_count = 0
+
+            # 清空历史消息收集器
+            self.history_messages = []
 
     def on_history_message_received(self):
         """历史消息接收计数"""
