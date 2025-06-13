@@ -852,7 +852,12 @@ class ChatRoomServer:
 
             # 获取文件元数据
             try:
-                file_metadata = self.chat_manager.db.get_file_metadata_by_id(file_id)
+                # 确保file_id是整数类型
+                file_id_int = int(file_id)
+                file_metadata = self.chat_manager.db.get_file_metadata_by_id(file_id_int)
+            except ValueError:
+                self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "无效的文件ID")
+                return
             except Exception:
                 self.send_error(client_socket, ErrorCode.FILE_NOT_FOUND, "文件不存在")
                 return

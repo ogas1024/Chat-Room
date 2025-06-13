@@ -148,9 +148,9 @@ class CommandParser:
         
         self.register_command("recv_files", {
             "description": "接收文件",
-            "usage": "/recv_files [-n <文件标识>|-l|-a]",
+            "usage": "/recv_files [-n <文件ID>|-l|-a]",
             "options": {
-                "-n": "接收指定文件",
+                "-n": "接收指定文件ID的文件",
                 "-l": "列出可下载文件",
                 "-a": "接收所有文件"
             },
@@ -586,24 +586,28 @@ class CommandHandler:
             return True, file_list.strip()
 
         elif option == "-n":
-            # 下载指定文件（支持文件名）
+            # 下载指定文件（支持文件ID）
             if not self.chat_client.current_chat_group:
                 return False, "请先进入聊天组"
 
             option_value = command.options[option]
             if option_value is True:
-                return False, "请指定文件名: -n <文件名>"
+                return False, "请指定文件ID: -n <文件ID>"
 
-            # 支持多个文件名
-            filenames = [option_value] + [arg for arg in command.args if not arg.startswith('-')]
+            # 支持多个文件ID
+            file_ids = [option_value] + [arg for arg in command.args if not arg.startswith('-')]
 
             results = []
-            for filename in filenames:
-                success, message = self.chat_client.download_file_by_name(filename)
-                if success:
-                    results.append(f"✅ {filename}: {message}")
-                else:
-                    results.append(f"❌ {filename}: {message}")
+            for file_id_str in file_ids:
+                try:
+                    file_id = int(file_id_str)
+                    success, message = self.chat_client.download_file(file_id)
+                    if success:
+                        results.append(f"✅ ID {file_id}: {message}")
+                    else:
+                        results.append(f"❌ ID {file_id}: {message}")
+                except ValueError:
+                    results.append(f"❌ {file_id_str}: 无效的文件ID，请使用数字")
 
             return True, "\n".join(results)
 

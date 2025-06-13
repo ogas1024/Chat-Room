@@ -351,6 +351,7 @@ class FileUploadRequest(BaseMessage):
     file_data: str = ""
     file_size: int = 0
     chat_group_id: Optional[int] = None
+    sender_id: Optional[int] = None  # 添加sender_id字段以避免消息解析错误
 
 
 @dataclass

@@ -272,6 +272,7 @@ config.json
 uploads/
 media/
 static/uploads/
+server/data
 
 # 临时文件和缓存
 tmp/

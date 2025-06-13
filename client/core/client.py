@@ -814,7 +814,7 @@ class ChatClient:
                     # 确定保存路径
                     if not save_path:
                         # 使用默认下载目录: client/Downloads/$username/
-                        username = self.user_info['username'] if self.user_info else 'unknown'
+                        username = self.current_user['username'] if self.current_user else 'unknown'
                         download_dir = os.path.join("client", "Downloads", username)
                         os.makedirs(download_dir, exist_ok=True)
                         save_path = os.path.join(download_dir, filename)
