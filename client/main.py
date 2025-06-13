@@ -217,10 +217,15 @@ class SimpleChatClient:
     def connect_to_server(self) -> bool:
         """连接到服务器"""
         print(f"正在连接服务器 {self.chat_client.network_client.host}:{self.chat_client.network_client.port}...")
-        
+
         if self.chat_client.connect():
             print("✅ 连接服务器成功")
             self.current_state = "connected"
+
+            # 重要：连接成功后重新设置Simple模式的消息处理器
+            # 确保不被其他地方的处理器设置覆盖
+            self._setup_simple_message_handlers()
+
             return True
         else:
             print("❌ 连接服务器失败")
