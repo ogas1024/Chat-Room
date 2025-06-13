@@ -516,14 +516,16 @@ class CommandHandler:
         """处理进入聊天组命令"""
         group_name = command.args[0]
 
+        # 如果是Simple模式，在进入聊天组前重新设置消息处理器
+        if hasattr(self, 'simple_client') and self.simple_client:
+            # 清空历史消息收集器，准备接收新的历史消息
+            self.simple_client.history_messages = []
+            self.simple_client.current_chat_group_id = None
+            # 强制重新设置消息处理器
+            self.simple_client._force_override_message_handlers()
+
         # 进入聊天组
         success, message = self.chat_client.enter_chat_group(group_name)
-
-        # 如果成功进入聊天组，触发清空聊天记录的信号
-        if success:
-            # 这里可以通过回调或事件通知UI清空聊天记录
-            # 由于架构限制，我们在UI层处理这个逻辑
-            pass
 
         return success, message
     

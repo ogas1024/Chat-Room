@@ -78,33 +78,38 @@ class NetworkClient:
     
     def _receive_messages(self):
         """接收消息的线程函数"""
-        buffer = ""
-        
+        buffer = b""  # 使用字节缓冲区
+
         while self.running and self.connected:
             try:
                 data = self.socket.recv(BUFFER_SIZE)
                 if not data:
                     break
-                
-                # 解码数据
-                buffer += data.decode('utf-8')
-                
-                # 处理完整的消息（以换行符分隔）
-                while '\n' in buffer:
-                    line, buffer = buffer.split('\n', 1)
-                    if line.strip():
-                        self._handle_received_message(line.strip())
-                        
+
+                # 添加到字节缓冲区
+                buffer += data
+
+                # 尝试解码并处理完整的消息（以换行符分隔）
+                while b'\n' in buffer:
+                    line_bytes, buffer = buffer.split(b'\n', 1)
+                    if line_bytes:
+                        try:
+                            # 解码单条消息
+                            line = line_bytes.decode('utf-8').strip()
+                            if line:
+                                self._handle_received_message(line)
+                        except UnicodeDecodeError as e:
+                            print(f"消息解码错误: {e}")
+                            print(f"问题数据: {line_bytes[:100]}...")  # 显示前100字节用于调试
+                            continue
+
             except socket.timeout:
                 continue
             except socket.error as e:
                 if self.running:
                     print(f"接收消息时出错: {e}")
                 break
-            except UnicodeDecodeError as e:
-                print(f"消息解码错误: {e}")
-                continue
-        
+
         self.connected = False
     
     def _handle_received_message(self, message_str: str):

@@ -41,6 +41,8 @@ class SimpleChatClient:
         """初始化客户端"""
         self.chat_client = ChatClient(host, port)
         self.command_handler = CommandHandler(self.chat_client)
+        # 设置Simple客户端的引用，以便命令处理器可以访问
+        self.command_handler.simple_client = self
         self.running = False
         self.current_state = "disconnected"  # disconnected, connected, logged_in
 
@@ -69,6 +71,23 @@ class SimpleChatClient:
         self.chat_client.network_client.set_message_handler(
             MessageType.CHAT_MESSAGE, self._handle_simple_chat_message
         )
+
+    def _force_override_message_handlers(self):
+        """强制覆盖消息处理器，确保Simple模式的处理器不被覆盖"""
+        from shared.constants import MessageType
+
+        # 强制设置历史消息处理器
+        self.chat_client.network_client.message_handlers[MessageType.CHAT_HISTORY] = self._handle_simple_chat_history
+        self.chat_client.network_client.message_handlers[MessageType.CHAT_HISTORY_COMPLETE] = self._handle_simple_chat_history_complete
+        self.chat_client.network_client.message_handlers[MessageType.CHAT_MESSAGE] = self._handle_simple_chat_message
+
+        # 同时覆盖ChatClient中可能设置的处理器
+        if hasattr(self.chat_client, '_handle_chat_history'):
+            self.chat_client._handle_chat_history = self._handle_simple_chat_history
+        if hasattr(self.chat_client, '_handle_chat_history_complete'):
+            self.chat_client._handle_chat_history_complete = self._handle_simple_chat_history_complete
+        if hasattr(self.chat_client, '_handle_chat_message'):
+            self.chat_client._handle_chat_message = self._handle_simple_chat_message
 
     def _handle_simple_chat_history(self, message):
         """处理Simple模式的历史聊天消息 - 收集消息而不是立即输出"""
@@ -225,6 +244,9 @@ class SimpleChatClient:
             # 重要：连接成功后重新设置Simple模式的消息处理器
             # 确保不被其他地方的处理器设置覆盖
             self._setup_simple_message_handlers()
+
+            # 强制覆盖可能被其他地方设置的处理器
+            self._force_override_message_handlers()
 
             return True
         else:

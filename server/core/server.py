@@ -135,6 +135,7 @@ class ChatRoomServer:
         """处理客户端连接"""
         client_ip = client_address[0]
         client_port = client_address[1]
+        buffer = b""  # 使用字节缓冲区
 
         try:
             while self.running:
@@ -143,28 +144,23 @@ class ChatRoomServer:
                 if not data:
                     break
 
-                try:
-                    # 解析消息
-                    message_str = data.decode('utf-8').strip()
-                    if not message_str:
-                        continue
+                # 添加到字节缓冲区
+                buffer += data
 
-                    # 记录接收到的消息
-                    self.logger.debug("接收消息", client_ip=client_ip, message_length=len(message_str))
-
-                    # 处理可能的多条消息
-                    for line in message_str.split('\n'):
-                        if line.strip():
-                            self.process_message(client_socket, line.strip())
-
-                except UnicodeDecodeError:
-                    self.logger.warning("消息编码错误", client_ip=client_ip)
-                    log_security_event("invalid_encoding", client_ip=client_ip)
-                    self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "消息编码错误")
-                except Exception as e:
-                    self.logger.error("处理消息时出错", client_ip=client_ip, error=str(e))
-                    print(f"处理消息时出错: {e}")
-                    self.send_error(client_socket, ErrorCode.SERVER_ERROR, "服务器内部错误")
+                # 处理完整的消息（以换行符分隔）
+                while b'\n' in buffer:
+                    line_bytes, buffer = buffer.split(b'\n', 1)
+                    if line_bytes:
+                        try:
+                            # 解码单条消息
+                            message_str = line_bytes.decode('utf-8').strip()
+                            if message_str:
+                                # 记录接收到的消息
+                                self.logger.debug("接收消息", client_ip=client_ip, message_length=len(message_str))
+                                self.process_message(client_socket, message_str)
+                        except UnicodeDecodeError as e:
+                            self.logger.warning("消息解码错误", client_ip=client_ip, error=str(e))
+                            continue
 
         except ConnectionResetError:
             self.logger.info("客户端连接重置", client_ip=client_ip, client_port=client_port)
