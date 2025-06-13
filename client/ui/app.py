@@ -195,7 +195,7 @@ class ChatRoomApp(App):
 
         from shared.constants import MessageType
 
-        # 设置各种消息的处理器
+        # 设置各种消息的处理器，确保覆盖ChatClient的默认处理器
         self.chat_client.network_client.set_message_handler(
             MessageType.CHAT_MESSAGE, self.handle_chat_message
         )
@@ -456,13 +456,17 @@ class ChatRoomApp(App):
         # 添加空行分隔
         self.chat_log.write("")
 
-    def add_history_message(self, sender: str, content: str, is_self: bool = False):
+    def add_history_message(self, sender: str, content: str, is_self: bool = False, timestamp: str = None):
         """添加历史聊天消息（使用较淡的样式）"""
         if not self.chat_log:
             return
 
         # 按照设计文档格式，但使用较淡的样式表示历史消息
-        timestamp = datetime.now().strftime(DISPLAY_TIME_FORMAT)
+        # 如果提供了时间戳，使用原始时间戳；否则使用当前时间
+        if timestamp:
+            display_timestamp = timestamp
+        else:
+            display_timestamp = datetime.now().strftime(DISPLAY_TIME_FORMAT)
 
         # 第一行：用户名和时间戳（历史消息用较淡的颜色）
         header_line = Text()
@@ -470,7 +474,7 @@ class ChatRoomApp(App):
             header_line.append(f"{sender:<30}", style="dim green")
         else:
             header_line.append(f"{sender:<30}", style="dim blue")
-        header_line.append(f"{timestamp}", style="dim")
+        header_line.append(f"{display_timestamp}", style="dim")
 
         # 第二行：消息内容（带>前缀，历史消息用较淡的颜色）
         content_line = Text()
@@ -650,10 +654,32 @@ class ChatRoomApp(App):
         # 历史消息以特殊样式显示
         is_self = (self.current_user and
                   message.sender_username == self.current_user)
+
+        # 格式化历史消息的时间戳
+        message_timestamp = None
+        if hasattr(message, 'timestamp') and message.timestamp:
+            try:
+                # 尝试解析时间戳并格式化为显示格式
+                from datetime import datetime
+                from shared.constants import TIMESTAMP_FORMAT, DISPLAY_TIME_FORMAT
+
+                # 如果时间戳是字符串，解析它
+                if isinstance(message.timestamp, str):
+                    # 数据库时间戳格式：YYYY-MM-DD HH:MM:SS
+                    dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
+                else:
+                    dt = message.timestamp
+
+                message_timestamp = dt.strftime(DISPLAY_TIME_FORMAT)
+            except Exception as e:
+                # 如果时间戳解析失败，使用当前时间
+                message_timestamp = None
+
         self.add_history_message(
             message.sender_username,
             message.content,
-            is_self
+            is_self,
+            message_timestamp
         )
 
         # 计数历史消息

@@ -43,7 +43,85 @@ class SimpleChatClient:
         self.command_handler = CommandHandler(self.chat_client)
         self.running = False
         self.current_state = "disconnected"  # disconnected, connected, logged_in
-    
+
+        # 设置Simple模式的消息处理器
+        self._setup_simple_message_handlers()
+
+    def _setup_simple_message_handlers(self):
+        """设置Simple模式的消息处理器"""
+        from shared.constants import MessageType
+
+        # 历史消息处理器
+        self.chat_client.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY, self._handle_simple_chat_history
+        )
+
+        # 历史消息加载完成处理器
+        self.chat_client.network_client.set_message_handler(
+            MessageType.CHAT_HISTORY_COMPLETE, self._handle_simple_chat_history_complete
+        )
+
+        # 实时聊天消息处理器
+        self.chat_client.network_client.set_message_handler(
+            MessageType.CHAT_MESSAGE, self._handle_simple_chat_message
+        )
+
+    def _handle_simple_chat_history(self, message):
+        """处理Simple模式的历史聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.chat_client.current_chat_group:
+            return
+
+        if message.chat_group_id != self.chat_client.current_chat_group['id']:
+            return
+
+        # 格式化时间戳
+        timestamp_str = ""
+        if hasattr(message, 'timestamp') and message.timestamp:
+            try:
+                from datetime import datetime
+                from shared.constants import TIMESTAMP_FORMAT
+
+                if isinstance(message.timestamp, str):
+                    dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
+                    timestamp_str = dt.strftime("[%H:%M:%S]")
+                else:
+                    timestamp_str = f"[{message.timestamp}]"
+            except:
+                timestamp_str = ""
+
+        # 显示历史消息（使用较淡的标识）
+        print(f"📜 {timestamp_str} [{message.sender_username}]: {message.content}")
+
+    def _handle_simple_chat_history_complete(self, message):
+        """处理Simple模式的历史消息加载完成"""
+        if hasattr(message, 'message_count'):
+            if message.message_count > 0:
+                print(f"✅ 已加载 {message.message_count} 条历史消息")
+            else:
+                print("✅ 暂无历史消息")
+        print("-" * 50)
+
+    def _handle_simple_chat_message(self, message):
+        """处理Simple模式的实时聊天消息"""
+        # 验证消息是否属于当前聊天组
+        if not hasattr(message, 'chat_group_id'):
+            return
+
+        if not self.chat_client.current_chat_group:
+            return
+
+        if message.chat_group_id != self.chat_client.current_chat_group['id']:
+            return
+
+        # 显示实时消息
+        from datetime import datetime
+        timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+        print(f"💬 {timestamp_str} [{message.sender_username}]: {message.content}")
+
     def start(self):
         """启动客户端"""
         print("=" * 50)
