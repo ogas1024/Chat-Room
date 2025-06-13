@@ -68,42 +68,51 @@ class SimpleChatClient:
 
     def _handle_simple_chat_history(self, message):
         """处理Simple模式的历史聊天消息"""
-        # 验证消息是否属于当前聊天组
-        if not hasattr(message, 'chat_group_id'):
-            return
+        try:
+            # 验证消息是否属于当前聊天组
+            if not hasattr(message, 'chat_group_id'):
+                return
 
-        if not self.chat_client.current_chat_group:
-            return
+            if not self.chat_client.current_chat_group:
+                return
 
-        if message.chat_group_id != self.chat_client.current_chat_group['id']:
-            return
+            if message.chat_group_id != self.chat_client.current_chat_group['id']:
+                return
 
-        # 格式化时间戳
-        timestamp_str = ""
-        if hasattr(message, 'timestamp') and message.timestamp:
-            try:
-                from datetime import datetime
-                from shared.constants import TIMESTAMP_FORMAT
+            # 简化时间戳处理
+            timestamp_str = ""
+            if hasattr(message, 'timestamp') and message.timestamp:
+                try:
+                    if isinstance(message.timestamp, str) and len(message.timestamp) > 10:
+                        time_part = message.timestamp.split(' ')[-1][:8]
+                        timestamp_str = f"[{time_part}]"
+                    else:
+                        timestamp_str = f"[{str(message.timestamp)[:8]}]"
+                except:
+                    timestamp_str = "[--:--:--]"
 
-                if isinstance(message.timestamp, str):
-                    dt = datetime.strptime(message.timestamp, TIMESTAMP_FORMAT)
-                    timestamp_str = dt.strftime("[%H:%M:%S]")
-                else:
-                    timestamp_str = f"[{message.timestamp}]"
-            except:
-                timestamp_str = ""
+            # 使用sys.stdout强制输出，确保显示
+            import sys
+            output = f"📜 {timestamp_str} [{message.sender_username}]: {message.content}\n"
+            sys.stdout.write(output)
+            sys.stdout.flush()
 
-        # 显示历史消息（使用较淡的标识）
-        print(f"📜 {timestamp_str} [{message.sender_username}]: {message.content}")
+        except Exception as e:
+            # 如果处理失败，显示错误信息
+            import sys
+            sys.stdout.write(f"📜 [ERROR]: 历史消息处理失败: {e}\n")
+            sys.stdout.flush()
 
     def _handle_simple_chat_history_complete(self, message):
         """处理Simple模式的历史消息加载完成"""
+        import sys
         if hasattr(message, 'message_count'):
             if message.message_count > 0:
-                print(f"✅ 已加载 {message.message_count} 条历史消息")
+                sys.stdout.write(f"✅ 已加载 {message.message_count} 条历史消息\n")
             else:
-                print("✅ 暂无历史消息")
-        print("-" * 50)
+                sys.stdout.write("✅ 暂无历史消息\n")
+        sys.stdout.write("-" * 50 + "\n")
+        sys.stdout.flush()
 
     def _handle_simple_chat_message(self, message):
         """处理Simple模式的实时聊天消息"""
@@ -342,8 +351,8 @@ def main():
             # TUI模式下禁用控制台日志，避免干扰界面
             logging_config['console_enabled'] = False
         else:
-            # 简单模式下启用控制台日志
-            logging_config['console_enabled'] = True
+            # 简单模式下也禁用控制台日志，避免干扰print输出
+            logging_config['console_enabled'] = False
 
         # 初始化日志系统
         init_logger(logging_config, "client")
