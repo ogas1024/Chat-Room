@@ -183,13 +183,18 @@ class NetworkClient:
             return response
 
         finally:
-            # 恢复原来的处理器
+            # 恢复原来的处理器 - 改进版本，避免覆盖Simple模式的处理器
             if message_types:
                 for msg_type in message_types:
                     if msg_type in old_handlers:
+                        # 恢复原来的处理器
                         self.message_handlers[msg_type] = old_handlers[msg_type]
                     else:
-                        self.message_handlers.pop(msg_type, None)
+                        # 如果原来没有处理器，检查当前处理器是否是我们设置的临时处理器
+                        # 如果是，才删除；如果不是（可能被其他地方设置了），保留它
+                        if (msg_type in self.message_handlers and
+                            self.message_handlers[msg_type] == response_handler):
+                            self.message_handlers.pop(msg_type, None)
             else:
                 self.default_message_handler = old_default_handler
 
@@ -628,13 +633,15 @@ class ChatClient:
         if response:
             if response.message_type == MessageType.ENTER_CHAT_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    # 更新当前聊天组信息
+                    # 立即更新当前聊天组信息，确保历史消息处理器能正确验证
                     if hasattr(response, 'chat_group_id') and hasattr(response, 'chat_name'):
-                        self.current_chat_group = {
+                        new_chat_group = {
                             'id': response.chat_group_id,
                             'name': response.chat_name,
                             'is_private_chat': False  # 默认值，可以后续从服务器获取
                         }
+                        # 先更新聊天组信息，再返回成功
+                        self.current_chat_group = new_chat_group
                     return True, f"已进入聊天组 '{group_name}'"
                 else:
                     return False, response.error_message or "进入聊天组失败"

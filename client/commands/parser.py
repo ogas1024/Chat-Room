@@ -521,11 +521,18 @@ class CommandHandler:
             # 清空历史消息收集器，准备接收新的历史消息
             self.simple_client.history_messages = []
             self.simple_client.current_chat_group_id = None
+
             # 强制重新设置消息处理器
             self.simple_client._force_override_message_handlers()
 
         # 进入聊天组
         success, message = self.chat_client.enter_chat_group(group_name)
+
+        # 如果成功进入聊天组，确保Simple客户端的状态同步
+        if success and hasattr(self, 'simple_client') and self.simple_client:
+            # 同步聊天组信息到Simple客户端
+            if self.chat_client.current_chat_group:
+                self.simple_client.current_chat_group_id = self.chat_client.current_chat_group['id']
 
         return success, message
     

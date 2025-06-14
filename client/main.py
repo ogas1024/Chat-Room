@@ -89,6 +89,8 @@ class SimpleChatClient:
         if hasattr(self.chat_client, '_handle_chat_message'):
             self.chat_client._handle_chat_message = self._handle_simple_chat_message
 
+
+
     def _handle_simple_chat_history(self, message):
         """处理Simple模式的历史聊天消息 - 收集消息而不是立即输出"""
         try:
@@ -96,11 +98,18 @@ class SimpleChatClient:
             if not hasattr(message, 'chat_group_id'):
                 return
 
-            if not self.chat_client.current_chat_group:
+            current_group = self.chat_client.current_chat_group
+
+            # 改进的验证逻辑：如果当前没有聊天组，或者聊天组ID不匹配，
+            # 但这是一个历史消息，我们采用更宽松的策略
+            if current_group and message.chat_group_id != current_group['id']:
                 return
 
-            if message.chat_group_id != self.chat_client.current_chat_group['id']:
-                return
+            # 如果当前没有聊天组，但收到了历史消息，说明可能是时序问题
+            # 我们暂时接受这个历史消息，并设置聊天组ID
+            if not current_group:
+                # 不return，继续处理
+                pass
 
             # 如果是新的聊天组，清空历史消息收集器
             if self.current_chat_group_id != message.chat_group_id:
@@ -154,6 +163,12 @@ class SimpleChatClient:
         import sys
 
         try:
+            # 改进的验证逻辑：对于历史消息完成通知，我们采用更宽松的验证
+            current_group = self.chat_client.current_chat_group
+            if current_group and message.chat_group_id != current_group['id']:
+                # 不return，继续处理，因为可能是时序问题
+                pass
+
             # 构建完整的输出字符串
             output_lines = []
 
