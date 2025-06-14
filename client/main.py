@@ -91,6 +91,8 @@ class SimpleChatClient:
 
 
 
+
+
     def _handle_simple_chat_history(self, message):
         """处理Simple模式的历史聊天消息 - 收集消息而不是立即输出"""
         try:

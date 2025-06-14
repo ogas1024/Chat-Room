@@ -624,24 +624,52 @@ class ChatClient:
         if not self.network_client.send_message(request):
             return False, "发送请求失败"
 
-        # 等待响应
-        response = self.network_client.wait_for_response(
-            timeout=10.0,
-            message_types=[MessageType.ENTER_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]
-        )
+        # 创建一个自定义的响应处理器，在接收到响应时立即更新聊天组状态
+        response = None
+
+        def custom_response_handler(message):
+            nonlocal response
+            if message.message_type in [MessageType.ENTER_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]:
+                response = message
+                # 如果是成功的进入聊天组响应，立即更新当前聊天组信息
+                if (message.message_type == MessageType.ENTER_CHAT_RESPONSE and
+                    hasattr(message, 'success') and message.success and
+                    hasattr(message, 'chat_group_id') and hasattr(message, 'chat_name')):
+
+                    new_chat_group = {
+                        'id': message.chat_group_id,
+                        'name': message.chat_name,
+                        'is_private_chat': False
+                    }
+                    self.current_chat_group = new_chat_group
+
+        # 使用自定义的wait_for_response逻辑
+        import time
+        start_time = time.time()
+        timeout = 10.0
+
+        # 保存原有的处理器
+        old_handlers = {}
+        for msg_type in [MessageType.ENTER_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]:
+            if msg_type in self.network_client.message_handlers:
+                old_handlers[msg_type] = self.network_client.message_handlers[msg_type]
+            self.network_client.message_handlers[msg_type] = custom_response_handler
+
+        try:
+            # 等待响应
+            while time.time() - start_time < timeout and response is None:
+                time.sleep(0.1)
+        finally:
+            # 恢复原来的处理器
+            for msg_type in [MessageType.ENTER_CHAT_RESPONSE, MessageType.ERROR_MESSAGE]:
+                if msg_type in old_handlers:
+                    self.network_client.message_handlers[msg_type] = old_handlers[msg_type]
+                else:
+                    self.network_client.message_handlers.pop(msg_type, None)
 
         if response:
             if response.message_type == MessageType.ENTER_CHAT_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    # 立即更新当前聊天组信息，确保历史消息处理器能正确验证
-                    if hasattr(response, 'chat_group_id') and hasattr(response, 'chat_name'):
-                        new_chat_group = {
-                            'id': response.chat_group_id,
-                            'name': response.chat_name,
-                            'is_private_chat': False  # 默认值，可以后续从服务器获取
-                        }
-                        # 先更新聊天组信息，再返回成功
-                        self.current_chat_group = new_chat_group
                     return True, f"已进入聊天组 '{group_name}'"
                 else:
                     return False, response.error_message or "进入聊天组失败"
