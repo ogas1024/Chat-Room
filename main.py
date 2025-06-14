@@ -58,13 +58,13 @@ def run_demo(args):
     """运行演示"""
     try:
         if args.demo_type == 'basic':
-            from demo.demo import run_demo
+            from archive.demo.demo import run_demo
             run_demo()
         elif args.demo_type == 'ai':
-            from demo.demo_ai_features import main as ai_demo_main
+            from archive.demo.demo_ai_features import main as ai_demo_main
             ai_demo_main()
         elif args.demo_type == 'todo':
-            from demo.demo_todo_features import main as todo_demo_main
+            from archive.demo.demo_todo_features import main as todo_demo_main
             todo_demo_main()
         else:
             print("❌ 未知的演示类型")
