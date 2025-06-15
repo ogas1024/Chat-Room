@@ -876,6 +876,10 @@ class ChatRoomServer:
             )
             self.send_message(client_socket, response)
 
+            # 添加小延迟确保客户端能接收到开始下载响应
+            import time
+            time.sleep(0.1)
+
             # 发送文件数据
             self._send_file_data(client_socket, server_filepath, file_metadata['original_filename'])
 
@@ -886,12 +890,31 @@ class ChatRoomServer:
     def _send_file_data(self, client_socket: socket.socket, server_filepath: str, filename: str):
         """发送文件数据"""
         try:
+            # 添加延迟确保客户端能处理开始下载响应
+            import time
+            time.sleep(1.0)  # 增加延迟时间，确保客户端准备好接收文件数据
+
+            # 发送文件数据开始标记 - 使用更明确的分隔符
+            start_marker = b"===FILE_DATA_START===\n"
+            client_socket.send(start_marker)
+
+            # 再次延迟确保标记被处理
+            time.sleep(0.5)
+
+            # 发送文件数据
             with open(server_filepath, 'rb') as f:
                 while True:
                     data = f.read(FILE_CHUNK_SIZE)
                     if not data:
                         break
                     client_socket.send(data)
+
+            # 发送文件数据结束标记 - 使用更明确的分隔符
+            end_marker = b"\n===FILE_DATA_END===\n"
+            client_socket.send(end_marker)
+
+            # 再次添加延迟确保文件数据完全发送
+            time.sleep(0.5)
 
             # 发送下载完成响应
             response = FileDownloadResponse(

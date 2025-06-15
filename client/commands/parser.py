@@ -316,6 +316,13 @@ class CommandHandler:
             # 记录命令开始执行
             self.logger.info("执行命令", command=command.name, args=command.args, options=command.options)
 
+            # 对于recv_files命令，添加额外的调试信息
+            if command.name == "recv_files":
+                print(f"[DEBUG] recv_files命令解析结果:")
+                print(f"[DEBUG]   args: {command.args}")
+                print(f"[DEBUG]   options: {command.options}")
+                print(f"[DEBUG]   raw_input: {command.raw_input}")
+
             # 如果用户已登录，记录用户操作
             if self.chat_client.is_logged_in() and self.chat_client.current_user:
                 user_id = self.chat_client.current_user.get('id')
@@ -566,6 +573,8 @@ class CommandHandler:
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
 
+        # 调试信息已在上层处理器中输出
+
         if not command.options:
             return False, "请指定操作: -l(列出文件) -n <文件ID>(下载文件) -a(下载所有)"
 
@@ -594,15 +603,20 @@ class CommandHandler:
 
         elif option == "-n":
             # 下载指定文件
-            if len(command.args) < 1:
+            # 文件ID应该从选项值中获取，而不是从args中
+            option_value = command.options[option]
+
+            # 检查选项值是否为True（表示没有提供文件ID）
+            if option_value is True:
                 return False, "请指定文件ID"
 
             try:
-                file_id = int(command.args[0])
+                file_id = int(option_value)
             except ValueError:
                 return False, "文件ID必须是数字"
 
-            save_path = command.args[1] if len(command.args) > 1 else None
+            # 保存路径可以从args中获取（如果有的话）
+            save_path = command.args[0] if len(command.args) > 0 else None
             success, message = self.chat_client.download_file(file_id, save_path)
             return success, message
 

@@ -66,7 +66,7 @@ class NetworkClient:
         """发送消息到服务器"""
         if not self.connected or not self.socket:
             return False
-        
+
         try:
             message_json = message.to_json() + '\n'
             self.socket.send(message_json.encode('utf-8'))
@@ -75,22 +75,194 @@ class NetworkClient:
             print(f"发送消息失败: {e}")
             self.connected = False
             return False
+
+    def send_file_data(self, file_path: str, chunk_size: int = 8192) -> bool:
+        """发送文件数据到服务器"""
+        if not self.connected or not self.socket:
+            return False
+
+        try:
+            import os
+            if not os.path.exists(file_path):
+                return False
+
+            with open(file_path, 'rb') as f:
+                while True:
+                    data = f.read(chunk_size)
+                    if not data:
+                        break
+                    self.socket.send(data)
+            return True
+        except Exception as e:
+            print(f"发送文件数据失败: {e}")
+            return False
+
+    def receive_file_data(self, save_path: str, file_size: int, chunk_size: int = 8192) -> bool:
+        """接收文件数据并保存到指定路径"""
+        if not self.connected or not self.socket:
+            return False
+
+        try:
+            import os
+            import time
+
+            # 确保目录存在
+            dir_path = os.path.dirname(save_path)
+            if dir_path:  # 只有当目录路径不为空时才创建
+                os.makedirs(dir_path, exist_ok=True)
+
+            # 检查save_path是否是目录
+            if os.path.isdir(save_path):
+                return False
+
+            # 暂停消息处理，避免文件数据被当作消息处理
+            old_running = self.running
+            self.running = False
+
+            # 等待消息处理线程暂停
+            time.sleep(0.2)
+
+            try:
+                # 等待文件数据开始标记 - 使用更明确的分隔符
+                start_marker = b"===FILE_DATA_START===\n"
+                buffer = b""
+                timeout_start = time.time()
+                timeout_duration = 30.0  # 30秒超时
+
+                while start_marker not in buffer:
+                    if time.time() - timeout_start > timeout_duration:
+                        return False
+
+                    try:
+                        self.socket.settimeout(1.0)  # 设置1秒超时
+                        data = self.socket.recv(1024)
+                        if not data:
+                            return False
+                        buffer += data
+                    except socket.timeout:
+                        continue
+                    except socket.error:
+                        return False
+                    finally:
+                        try:
+                            self.socket.settimeout(None)
+                        except:
+                            pass  # 忽略设置超时时的异常
+
+                # 移除开始标记，保留剩余数据
+                marker_pos = buffer.find(start_marker)
+                remaining_data = buffer[marker_pos + len(start_marker):]
+
+                # 接收文件数据 - 只接收指定大小的数据
+                received_size = 0
+                end_marker = b"\n===FILE_DATA_END===\n"
+
+                with open(save_path, 'wb') as f:
+                    # 先处理剩余数据
+                    if remaining_data:
+                        # 检查剩余数据中是否包含结束标记
+                        if end_marker in remaining_data:
+                            # 找到结束标记，只写入结束标记之前的数据
+                            end_pos = remaining_data.find(end_marker)
+                            file_data = remaining_data[:end_pos]
+                            write_size = min(len(file_data), file_size - received_size)
+                            f.write(file_data[:write_size])
+                            received_size += write_size
+                        else:
+                            write_size = min(len(remaining_data), file_size - received_size)
+                            f.write(remaining_data[:write_size])
+                            received_size += write_size
+
+                    # 继续接收直到达到文件大小或遇到结束标记
+                    file_buffer = b""
+                    while received_size < file_size:
+                        remaining = file_size - received_size
+                        current_chunk_size = min(chunk_size, remaining + len(end_marker))  # 多接收一些以检测结束标记
+
+                        try:
+                            self.socket.settimeout(5.0)  # 设置5秒超时
+                            data = self.socket.recv(current_chunk_size)
+                            if not data:
+                                break
+                        except socket.timeout:
+                            break
+                        except socket.error:
+                            break
+                        finally:
+                            try:
+                                self.socket.settimeout(None)
+                            except:
+                                pass  # 忽略设置超时时的异常
+
+                        file_buffer += data
+
+                        # 检查是否包含结束标记
+                        if end_marker in file_buffer:
+                            # 找到结束标记，只写入结束标记之前的数据
+                            end_pos = file_buffer.find(end_marker)
+                            file_data = file_buffer[:end_pos]
+                            write_size = min(len(file_data), file_size - received_size)
+                            f.write(file_data[:write_size])
+                            received_size += write_size
+                            break
+                        else:
+                            # 没有结束标记，写入所有数据（但不超过文件大小）
+                            write_size = min(len(file_buffer), file_size - received_size)
+                            f.write(file_buffer[:write_size])
+                            received_size += write_size
+                            file_buffer = file_buffer[write_size:]  # 保留未写入的数据
+
+                        if received_size >= file_size:
+                            break
+
+                # 验证文件大小
+                if received_size == file_size:
+                    return True
+                else:
+                    return False
+
+            finally:
+                # 恢复消息处理
+                self.running = old_running
+
+                # 等待一小段时间，让服务器发送完成响应
+                time.sleep(0.3)
+
+        except Exception as e:
+            print(f"接收文件数据失败: {e}")
+            return False
     
     def _receive_messages(self):
         """接收消息的线程函数"""
         buffer = b""  # 使用字节缓冲区
 
-        while self.running and self.connected:
+        while self.connected:  # 只检查连接状态，不检查running状态
             try:
-                data = self.socket.recv(BUFFER_SIZE)
-                if not data:
-                    break
+                # 检查是否需要暂停消息处理（文件传输时）
+                if not self.running:
+                    time.sleep(0.1)
+                    continue
+
+                # 设置非阻塞模式来避免与文件传输的超时设置冲突
+                try:
+                    self.socket.settimeout(1.0)  # 设置1秒超时
+                    data = self.socket.recv(BUFFER_SIZE)
+                    if not data:
+                        break
+                except socket.timeout:
+                    continue  # 超时是正常的，继续循环
+                finally:
+                    # 恢复socket设置，避免影响其他操作
+                    try:
+                        self.socket.settimeout(None)
+                    except:
+                        pass
 
                 # 添加到字节缓冲区
                 buffer += data
 
                 # 尝试解码并处理完整的消息（以换行符分隔）
-                while b'\n' in buffer:
+                while b'\n' in buffer and self.running:
                     line_bytes, buffer = buffer.split(b'\n', 1)
                     if line_bytes:
                         try:
@@ -103,13 +275,18 @@ class NetworkClient:
                             print(f"问题数据: {line_bytes[:100]}...")  # 显示前100字节用于调试
                             continue
 
-            except socket.timeout:
-                continue
             except socket.error as e:
-                if self.running:
+                # 检查是否是由于文件传输导致的临时错误
+                if e.errno == 11:  # EAGAIN/EWOULDBLOCK
+                    time.sleep(0.1)
+                    continue
+                elif self.connected:  # 只有在连接状态下才报告其他错误
                     print(f"接收消息时出错: {e}")
-                break
+                    break
+                else:
+                    break
 
+        # 只有在真正断开连接时才设置connected为False
         self.connected = False
     
     def _handle_received_message(self, message_str: str):
@@ -773,7 +950,19 @@ class ChatClient:
         if response:
             if response.message_type == MessageType.FILE_UPLOAD_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    return True, f"文件 '{filename}' 上传成功"
+                    # 服务器准备就绪，开始发送文件数据
+                    if self.network_client.send_file_data(file_path):
+                        # 等待上传完成确认
+                        final_response = self.network_client.wait_for_response(
+                            timeout=30.0,
+                            message_types=[MessageType.FILE_UPLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+                        )
+                        if final_response and hasattr(final_response, 'success') and final_response.success:
+                            return True, f"文件 '{filename}' 上传成功"
+                        else:
+                            return False, final_response.error_message if final_response and hasattr(final_response, 'error_message') else "文件上传失败"
+                    else:
+                        return False, "文件数据发送失败"
                 else:
                     return False, response.error_message or "文件上传失败"
             elif hasattr(response, 'error_message'):
@@ -783,6 +972,7 @@ class ChatClient:
 
     def download_file(self, file_id: int, save_path: str = None) -> tuple[bool, str]:
         """下载文件"""
+        import os
         from shared.messages import FileDownloadRequest
         from shared.constants import MessageType
 
@@ -799,7 +989,7 @@ class ChatClient:
         if not self.network_client.send_message(request):
             return False, "发送请求失败"
 
-        # 等待响应
+        # 等待第一个响应（开始下载）
         response = self.network_client.wait_for_response(
             timeout=30.0,  # 文件下载可能需要更长时间
             message_types=[MessageType.FILE_DOWNLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
@@ -808,7 +998,56 @@ class ChatClient:
         if response:
             if response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
                 if hasattr(response, 'success') and response.success:
-                    return True, f"文件下载成功: {response.file_path if hasattr(response, 'file_path') else save_path}"
+                    # 检查这是否是开始下载的响应（包含filename和file_size）
+                    if hasattr(response, 'filename') and response.filename and hasattr(response, 'file_size') and response.file_size > 0:
+                        # 这是开始下载的响应
+                        filename = response.filename
+                        file_size = response.file_size
+
+                        # 确定保存路径
+                        if not save_path:
+                            username = self.current_user['username'] if self.current_user else 'unknown'
+                            download_dir = os.path.join('client', 'Downloads', username)
+                            save_path = os.path.join(download_dir, filename)
+
+                        # 接收文件数据
+                        if self.network_client.receive_file_data(save_path, file_size):
+                            # 等待下载完成确认
+                            self.network_client.wait_for_response(
+                                timeout=10.0,
+                                message_types=[MessageType.FILE_DOWNLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+                            )
+                            return True, f"文件下载成功: {save_path}"
+                        else:
+                            return False, "文件数据接收失败"
+                    else:
+                        # 这可能是下载完成的响应，我们需要重新等待开始下载的响应
+                        # 重新等待开始下载的响应
+                        start_response = self.network_client.wait_for_response(
+                            timeout=10.0,
+                            message_types=[MessageType.FILE_DOWNLOAD_RESPONSE, MessageType.ERROR_MESSAGE]
+                        )
+
+                        if start_response and start_response.message_type == MessageType.FILE_DOWNLOAD_RESPONSE:
+                            if (hasattr(start_response, 'filename') and start_response.filename and
+                                hasattr(start_response, 'file_size') and start_response.file_size > 0):
+                                # 这是开始下载的响应
+                                filename = start_response.filename
+                                file_size = start_response.file_size
+
+                                # 确定保存路径
+                                if not save_path:
+                                    username = self.current_user['username'] if self.current_user else 'unknown'
+                                    download_dir = os.path.join('client', 'Downloads', username)
+                                    save_path = os.path.join(download_dir, filename)
+
+                                # 接收文件数据
+                                if self.network_client.receive_file_data(save_path, file_size):
+                                    return True, f"文件下载成功: {save_path}"
+                                else:
+                                    return False, "文件数据接收失败"
+
+                        return False, "无法获取正确的下载响应"
                 else:
                     return False, response.error_message or "文件下载失败"
             elif hasattr(response, 'error_message'):
