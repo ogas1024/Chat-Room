@@ -33,28 +33,26 @@ class ChatManager:
         # 添加创建者到聊天组
         self.db.add_user_to_chat_group(group_id, creator_id)
 
-        # 自动添加AI用户到所有聊天组（除了私聊）
-        if not is_private_chat:
-            try:
-                self.db.add_user_to_chat_group(group_id, AI_USER_ID)
-            except Exception as e:
-                print(f"警告：无法将AI用户添加到聊天组 {name}: {e}")
-
         # 添加初始成员
-        # 对于私聊：自动添加所有初始成员
-        # 对于普通群聊：不自动添加其他用户，他们需要主动加入
+        # 自动添加所有初始成员到聊天组
         if initial_members:
             for user_id in initial_members:
                 if user_id != creator_id:  # 避免重复添加创建者
                     try:
                         # 验证用户是否存在
                         self.db.get_user_by_id(user_id)
-                        # 只对私聊自动添加成员
-                        if is_private_chat:
-                            self.db.add_user_to_chat_group(group_id, user_id)
+                        # 添加用户到聊天组
+                        self.db.add_user_to_chat_group(group_id, user_id)
                     except:
                         # 忽略不存在的用户
                         pass
+
+        # 自动添加AI用户到所有聊天组
+        # 注意：AI用户添加在最后，这样可以确保聊天组已经有了基本成员
+        try:
+            self.db.add_user_to_chat_group(group_id, AI_USER_ID)
+        except Exception as e:
+            print(f"警告：无法将AI用户添加到聊天组 {name}: {e}")
 
         return group_id
     
