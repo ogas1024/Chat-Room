@@ -9,6 +9,7 @@ import json
 import copy
 from typing import Dict, Any, Optional, Union
 from pathlib import Path
+from shared.logger import get_logger
 
 
 class ConfigManager:
@@ -69,6 +70,8 @@ class ConfigManager:
             return self.config
             
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("配置文件加载失败", config_file=str(self.config_file), error=str(e))
             print(f"❌ 配置文件加载失败: {e}")
             print(f"💡 使用默认配置")
             self.config = copy.deepcopy(self.default_config)
@@ -95,6 +98,8 @@ class ConfigManager:
             return True
             
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("配置保存失败", config_file=str(self.config_file), error=str(e))
             print(f"❌ 配置保存失败: {e}")
             return False
     
@@ -145,6 +150,8 @@ class ConfigManager:
             return True
             
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("设置配置失败", key=key, value=str(value), error=str(e))
             print(f"❌ 设置配置失败: {e}")
             return False
     
@@ -162,6 +169,8 @@ class ConfigManager:
             self.config = self._merge_configs(self.config, updates)
             return True
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("批量更新配置失败", updates=str(updates), error=str(e))
             print(f"❌ 批量更新配置失败: {e}")
             return False
     
@@ -176,6 +185,8 @@ class ConfigManager:
             self.config = copy.deepcopy(self.default_config)
             return self.save_config()
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("重置配置失败", error=str(e))
             print(f"❌ 重置配置失败: {e}")
             return False
     
@@ -218,6 +229,8 @@ class ConfigManager:
             print("⚠️ jsonschema未安装，跳过配置验证")
             return True
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("配置验证失败", error=str(e))
             print(f"❌ 配置验证失败: {e}")
             return False
     
@@ -274,6 +287,8 @@ class ConfigManager:
             return True
             
         except Exception as e:
+            logger = get_logger("shared.config_manager")
+            logger.error("导出配置模板失败", template_path=str(template_path), error=str(e))
             print(f"❌ 导出配置模板失败: {e}")
             return False
 
@@ -292,5 +307,7 @@ def create_config_directory(config_dir: str) -> bool:
         Path(config_dir).mkdir(parents=True, exist_ok=True)
         return True
     except Exception as e:
+        logger = get_logger("shared.config_manager")
+        logger.error("创建配置目录失败", config_dir=config_dir, error=str(e))
         print(f"❌ 创建配置目录失败: {e}")
         return False

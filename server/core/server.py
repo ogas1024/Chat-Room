@@ -116,11 +116,11 @@ class ChatRoomServer:
                 except socket.error as e:
                     if self.running:
                         self.logger.error("接受连接时出错", error=str(e))
-                        print(f"接受连接时出错: {e}")
+                        log_network_event("accept_connection_error", error=str(e))
 
         except Exception as e:
             self.logger.error("服务器启动失败", error=str(e), exc_info=True)
-            print(f"服务器启动失败: {e}")
+            log_network_event("server_start_failed", error=str(e))
         finally:
             self.stop()
     
@@ -165,10 +165,9 @@ class ChatRoomServer:
         except ConnectionResetError:
             self.logger.info("客户端连接重置", client_ip=client_ip, client_port=client_port)
             log_network_event("client_connection_reset", client_ip=client_ip)
-            print(f"客户端 {client_address} 连接重置")
         except Exception as e:
             self.logger.error("处理客户端时出错", client_ip=client_ip, error=str(e), exc_info=True)
-            print(f"处理客户端 {client_address} 时出错: {e}")
+            log_network_event("client_handling_error", client_ip=client_ip, error=str(e))
         finally:
             # 清理连接
             user_info = self.user_manager.get_user_by_socket(client_socket)
@@ -230,7 +229,7 @@ class ChatRoomServer:
         except json.JSONDecodeError:
             self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "JSON格式错误")
         except Exception as e:
-            print(f"处理消息时出错: {e}")
+            self.logger.error("处理消息时出错", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "服务器内部错误")
     
     def handle_login(self, client_socket: socket.socket, message: LoginRequest):
@@ -268,7 +267,10 @@ class ChatRoomServer:
                 try:
                     self.chat_manager.db.add_user_to_chat_group(public_chat_id, user_info['id'])
                 except Exception as e:
-                    print(f"警告：用户 {user_info['username']} 加入public聊天组失败: {e}")
+                    self.logger.warning("用户加入public聊天组失败",
+                                      username=user_info['username'],
+                                      user_id=user_info['id'],
+                                      error=str(e))
 
             self.user_manager.set_user_current_chat(user_info['id'], public_chat_id)
 
@@ -303,7 +305,7 @@ class ChatRoomServer:
             self.send_login_response(client_socket, False, error_message=str(e))
         except Exception as e:
             self.logger.error("登录处理错误", username=message.username, client_ip=client_ip, error=str(e), exc_info=True)
-            print(f"登录处理错误: {e}")
+            log_security_event("login_error", username=message.username, client_ip=client_ip, error=str(e))
             self.send_login_response(client_socket, False, error_message="登录失败")
     
     def handle_register(self, client_socket: socket.socket, message: RegisterRequest):
@@ -333,7 +335,8 @@ class ChatRoomServer:
         except UserAlreadyExistsError as e:
             self.send_register_response(client_socket, False, error_message=str(e))
         except Exception as e:
-            print(f"注册处理错误: {e}")
+            self.logger.error("注册处理错误", username=message.username, error=str(e), exc_info=True)
+            log_security_event("register_error", username=message.username, error=str(e))
             self.send_register_response(client_socket, False, error_message="注册失败")
 
     def handle_chat_message(self, client_socket: socket.socket, message: ChatMessage):
@@ -407,7 +410,6 @@ class ChatRoomServer:
             self.logger.error("聊天消息处理错误",
                             user_id=user_info.get('user_id') if user_info else None,
                             error=str(e), exc_info=True)
-            print(f"聊天消息处理错误: {e}")
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "消息发送失败")
 
     def handle_user_info_request(self, client_socket: socket.socket):
@@ -426,7 +428,7 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"用户信息请求处理错误: {e}")
+            self.logger.error("用户信息请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取用户信息失败")
 
     def handle_list_users_request(self, client_socket: socket.socket, message: ListUsersRequest):
@@ -453,7 +455,7 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"用户列表请求处理错误: {e}")
+            self.logger.error("用户列表请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取用户列表失败")
 
     def handle_list_chats_request(self, client_socket: socket.socket, message: ListChatsRequest):
@@ -482,7 +484,7 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"聊天组列表请求处理错误: {e}")
+            self.logger.error("聊天组列表请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取聊天组列表失败")
 
     def handle_create_chat_request(self, client_socket: socket.socket, message: CreateChatRequest):
@@ -531,7 +533,7 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"创建聊天组请求处理错误: {e}")
+            self.logger.error("创建聊天组请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "创建聊天组失败")
 
     def handle_join_chat_request(self, client_socket: socket.socket, message: JoinChatRequest):
@@ -560,7 +562,7 @@ class ChatRoomServer:
         except ChatGroupNotFoundError as e:
             self.send_error(client_socket, ErrorCode.CHAT_NOT_FOUND, str(e))
         except Exception as e:
-            print(f"加入聊天组请求处理错误: {e}")
+            self.logger.error("加入聊天组请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "加入聊天组失败")
 
     def handle_enter_chat_request(self, client_socket: socket.socket, message: EnterChatRequest):
@@ -629,7 +631,7 @@ class ChatRoomServer:
         except PermissionDeniedError as e:
             self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, str(e))
         except Exception as e:
-            print(f"进入聊天组请求处理错误: {e}")
+            self.logger.error("进入聊天组请求处理错误", error=str(e), exc_info=True)
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "进入聊天组失败")
 
     def handle_logout(self, client_socket: socket.socket):
@@ -645,7 +647,7 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"登出处理错误: {e}")
+            self.logger.error("登出处理错误", error=str(e), exc_info=True)
 
     # 辅助方法
     def send_message(self, client_socket: socket.socket, message: BaseMessage):
@@ -760,7 +762,8 @@ class ChatRoomServer:
                                   filename, user_info['user_id'], chat_group_id)
 
         except Exception as e:
-            print(f"文件上传请求处理错误: {e}")
+            self.logger.error("文件上传请求处理错误", error=str(e), exc_info=True)
+            log_file_operation("upload_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件上传失败")
 
     def _receive_file_data(self, client_socket: socket.socket, server_filepath: str,
@@ -826,7 +829,8 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"文件数据接收错误: {e}")
+            self.logger.error("文件数据接收错误", filename=original_filename, error=str(e), exc_info=True)
+            log_file_operation("receive_data_error", original_filename, error=str(e))
             # 清理失败的文件
             if os.path.exists(server_filepath):
                 os.remove(server_filepath)
@@ -881,10 +885,16 @@ class ChatRoomServer:
             time.sleep(0.1)
 
             # 发送文件数据
+            self.logger.info("开始发送文件数据",
+                           filename=file_metadata['original_filename'],
+                           file_size=file_metadata['file_size'])
+            log_file_operation("send_start", file_metadata['original_filename'],
+                             file_size=file_metadata['file_size'])
             self._send_file_data(client_socket, server_filepath, file_metadata['original_filename'])
 
         except Exception as e:
-            print(f"文件下载请求处理错误: {e}")
+            self.logger.error("文件下载请求处理错误", error=str(e), exc_info=True)
+            log_file_operation("download_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件下载失败")
 
     def _send_file_data(self, client_socket: socket.socket, server_filepath: str, filename: str):
@@ -924,7 +934,8 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"文件数据发送错误: {e}")
+            self.logger.error("文件数据发送错误", filename=filename, error=str(e), exc_info=True)
+            log_file_operation("send_data_error", filename, error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件发送失败")
 
     def handle_file_list_request(self, client_socket: socket.socket, message: FileListRequest):
@@ -970,7 +981,8 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"文件列表请求处理错误: {e}")
+            self.logger.error("文件列表请求处理错误", error=str(e), exc_info=True)
+            log_file_operation("list_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "获取文件列表失败")
 
     def handle_ai_chat_request(self, client_socket: socket.socket, message: AIChatRequest):
@@ -1020,5 +1032,6 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            print(f"AI聊天请求处理错误: {e}")
+            self.logger.error("AI聊天请求处理错误", error=str(e), exc_info=True)
+            log_ai_operation("chat_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "AI聊天处理失败")

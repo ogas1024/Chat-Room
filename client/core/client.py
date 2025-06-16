@@ -10,6 +10,7 @@ from typing import Callable, Optional, Dict, Any, List
 
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE
 from shared.messages import BaseMessage, parse_message
+from shared.logger import get_logger
 
 
 class NetworkClient:
@@ -47,7 +48,8 @@ class NetworkClient:
             return True
             
         except socket.error as e:
-            print(f"连接服务器失败: {e}")
+            logger = get_logger("client.core.network")
+            logger.error("连接服务器失败", host=self.host, port=self.port, error=str(e))
             return False
     
     def disconnect(self):
@@ -72,7 +74,8 @@ class NetworkClient:
             self.socket.send(message_json.encode('utf-8'))
             return True
         except socket.error as e:
-            print(f"发送消息失败: {e}")
+            logger = get_logger("client.core.network")
+            logger.error("发送消息失败", error=str(e))
             self.connected = False
             return False
 
@@ -94,7 +97,8 @@ class NetworkClient:
                     self.socket.send(data)
             return True
         except Exception as e:
-            print(f"发送文件数据失败: {e}")
+            logger = get_logger("client.core.network")
+            logger.error("发送文件数据失败", file_path=file_path, error=str(e))
             return False
 
     def receive_file_data(self, save_path: str, file_size: int, chunk_size: int = 8192) -> bool:
@@ -229,7 +233,8 @@ class NetworkClient:
                 time.sleep(0.3)
 
         except Exception as e:
-            print(f"接收文件数据失败: {e}")
+            logger = get_logger("client.core.network")
+            logger.error("接收文件数据失败", save_path=save_path, file_size=file_size, error=str(e))
             return False
     
     def _receive_messages(self):
@@ -271,8 +276,8 @@ class NetworkClient:
                             if line:
                                 self._handle_received_message(line)
                         except UnicodeDecodeError as e:
-                            print(f"消息解码错误: {e}")
-                            print(f"问题数据: {line_bytes[:100]}...")  # 显示前100字节用于调试
+                            logger = get_logger("client.core.network")
+                            logger.error("消息解码错误", error=str(e), data_preview=str(line_bytes[:100]))
                             continue
 
             except socket.error as e:
@@ -281,7 +286,8 @@ class NetworkClient:
                     time.sleep(0.1)
                     continue
                 elif self.connected:  # 只有在连接状态下才报告其他错误
-                    print(f"接收消息时出错: {e}")
+                    logger = get_logger("client.core.network")
+                    logger.error("接收消息时出错", error=str(e))
                     break
                 else:
                     break
@@ -302,10 +308,12 @@ class NetworkClient:
             elif self.default_message_handler:
                 self.default_message_handler(message)
             else:
-                print(f"未处理的消息类型: {message_type}")
-                
+                logger = get_logger("client.core.network")
+                logger.debug("未处理的消息类型", message_type=message_type)
+
         except Exception as e:
-            print(f"处理接收消息时出错: {e}")
+            logger = get_logger("client.core.network")
+            logger.error("处理接收消息时出错", error=str(e), exc_info=True)
     
     def set_message_handler(self, message_type: str, handler: Callable):
         """设置特定消息类型的处理器"""

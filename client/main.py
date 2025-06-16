@@ -8,6 +8,7 @@ import sys
 from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
 from shared.constants import DEFAULT_HOST, DEFAULT_PORT
+from shared.logger import get_logger
 
 
 def get_user_input(prompt: str, required: bool = True) -> str:
@@ -351,6 +352,8 @@ class SimpleChatClient:
                 print(f"❌ {message}")
 
         except Exception as e:
+            logger = get_logger("client.main")
+            logger.error("登录时出错", username=username, error=str(e), exc_info=True)
             print(f"❌ 登录时出错: {e}")
     
     def handle_signin_command(self):
@@ -385,6 +388,8 @@ class SimpleChatClient:
                 print(f"❌ {message}")
 
         except Exception as e:
+            logger = get_logger("client.main")
+            logger.error("注册时出错", username=username, error=str(e), exc_info=True)
             print(f"❌ 注册时出错: {e}")
     
     def handle_message(self, message: str):
@@ -486,6 +491,8 @@ def main():
     except KeyboardInterrupt:
         print("\n程序被用户中断")
     except Exception as e:
+        logger = get_logger("client.main")
+        logger.error("程序运行出错", error=str(e), exc_info=True)
         print(f"程序运行出错: {e}")
         sys.exit(1)
 

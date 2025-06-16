@@ -88,7 +88,7 @@ def main():
         print("\n用户中断，正在关闭服务器...")
     except Exception as e:
         logger = get_logger("server.main")
-        logger.error(f"服务器启动失败: {e}", exc_info=True)
+        logger.error("服务器启动失败", error=str(e), exc_info=True)
         print(f"服务器启动失败: {e}")
         sys.exit(1)
 

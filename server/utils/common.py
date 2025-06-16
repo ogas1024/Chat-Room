@@ -10,6 +10,7 @@ from functools import wraps
 from shared.constants import ErrorCode
 from shared.messages import BaseMessage, ErrorMessage
 from shared.exceptions import AuthenticationError, PermissionDeniedError
+from shared.logger import get_logger
 
 
 def require_login(func: Callable) -> Callable:
@@ -61,7 +62,8 @@ class ResponseHelper:
             message_json = message.to_json() + '\n'
             client_socket.send(message_json.encode('utf-8'))
         except Exception as e:
-            print(f"发送消息失败: {e}")
+            logger = get_logger("server.utils.common")
+            logger.error("发送消息失败", error=str(e), exc_info=True)
     
     @staticmethod
     def send_error(client_socket: socket.socket, error_code: int, error_message: str):

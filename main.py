@@ -6,6 +6,7 @@ Chat-Room 聊天室项目统一入口
 
 import sys
 import argparse
+from shared.logger import get_logger
 from pathlib import Path
 
 # 确保项目根目录在Python路径中
@@ -30,6 +31,8 @@ def run_server(args):
 
         server_main()
     except ImportError as e:
+        logger = get_logger("main")
+        logger.error("服务器模块导入失败", error=str(e))
         print(f"❌ 服务器模块导入失败: {e}")
         sys.exit(1)
 
@@ -50,6 +53,8 @@ def run_client(args):
 
         client_main()
     except ImportError as e:
+        logger = get_logger("main")
+        logger.error("客户端模块导入失败", error=str(e))
         print(f"❌ 客户端模块导入失败: {e}")
         sys.exit(1)
 
@@ -70,6 +75,8 @@ def run_demo(args):
             print("❌ 未知的演示类型")
             sys.exit(1)
     except ImportError as e:
+        logger = get_logger("main")
+        logger.error("演示模块导入失败", error=str(e))
         print(f"❌ 演示模块导入失败: {e}")
         sys.exit(1)
 
@@ -106,6 +113,8 @@ def setup_config(_args):
         from config.examples.config_setup import main as config_main
         config_main()
     except ImportError as e:
+        logger = get_logger("main")
+        logger.error("配置工具导入失败", error=str(e))
         print(f"❌ 配置工具导入失败: {e}")
         sys.exit(1)
 
@@ -177,6 +186,8 @@ def main():
     except KeyboardInterrupt:
         print("\n程序被用户中断")
     except Exception as e:
+        logger = get_logger("main")
+        logger.error("程序运行出错", error=str(e), exc_info=True)
         print(f"❌ 程序运行出错: {e}")
         sys.exit(1)
 
