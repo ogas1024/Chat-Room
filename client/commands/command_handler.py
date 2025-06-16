@@ -34,6 +34,10 @@ class CommandHandler:
             'enter_chat': self.handle_enter_chat,
             'send_files': self.handle_send_files,
             'recv_files': self.handle_recv_files,
+            'user': self.handle_admin_user,
+            'group': self.handle_admin_group,
+            'ban': self.handle_admin_ban,
+            'free': self.handle_admin_free,
             'exit': self.handle_exit,
         }
     
@@ -165,3 +169,180 @@ class CommandHandler:
     def handle_exit(self, args: list) -> str:
         """处理退出命令"""
         return "退出功能"
+
+    def handle_admin_user(self, args: list) -> str:
+        """处理用户管理命令"""
+        if not self.client.is_logged_in():
+            return "请先登录"
+
+        if not self._is_admin():
+            return "权限不足：需要管理员权限"
+
+        if len(args) < 2:
+            return "用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
+
+        action = args[0]
+        if action == "-d":
+            # 删除用户
+            if len(args) < 2:
+                return "用法: /user -d <用户ID>"
+
+            try:
+                user_id = int(args[1])
+                return self._confirm_and_execute_admin_command("user", action, user_id, "", "")
+            except ValueError:
+                return "用户ID必须是数字"
+
+        elif action == "-m":
+            # 修改用户信息
+            if len(args) < 4:
+                return "用法: /user -m <用户ID> <字段> <新值>"
+
+            try:
+                user_id = int(args[1])
+                field = args[2]
+                new_value = args[3]
+                return self._confirm_and_execute_admin_command("user", action, user_id, "", new_value)
+            except ValueError:
+                return "用户ID必须是数字"
+
+        else:
+            return "不支持的操作。用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
+
+    def handle_admin_group(self, args: list) -> str:
+        """处理群组管理命令"""
+        if not self.client.is_logged_in():
+            return "请先登录"
+
+        if not self._is_admin():
+            return "权限不足：需要管理员权限"
+
+        if len(args) < 2:
+            return "用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
+
+        action = args[0]
+        if action == "-d":
+            # 删除群组
+            if len(args) < 2:
+                return "用法: /group -d <群组ID>"
+
+            try:
+                group_id = int(args[1])
+                return self._confirm_and_execute_admin_command("group", action, group_id, "", "")
+            except ValueError:
+                return "群组ID必须是数字"
+
+        elif action == "-m":
+            # 修改群组信息
+            if len(args) < 4:
+                return "用法: /group -m <群组ID> <字段> <新值>"
+
+            try:
+                group_id = int(args[1])
+                field = args[2]
+                new_value = args[3]
+                return self._confirm_and_execute_admin_command("group", action, group_id, "", new_value)
+            except ValueError:
+                return "群组ID必须是数字"
+
+        else:
+            return "不支持的操作。用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
+
+    def handle_admin_ban(self, args: list) -> str:
+        """处理禁言命令"""
+        if not self.client.is_logged_in():
+            return "请先登录"
+
+        if not self._is_admin():
+            return "权限不足：需要管理员权限"
+
+        if len(args) < 2:
+            return "用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
+
+        action = args[0]
+        target = args[1]
+
+        if action == "-u":
+            # 禁言用户
+            return self._confirm_and_execute_admin_command("ban", action, None, target, "")
+        elif action == "-g":
+            # 禁言群组
+            return self._confirm_and_execute_admin_command("ban", action, None, target, "")
+        else:
+            return "不支持的操作。用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
+
+    def handle_admin_free(self, args: list) -> str:
+        """处理解禁命令"""
+        if not self.client.is_logged_in():
+            return "请先登录"
+
+        if not self._is_admin():
+            return "权限不足：需要管理员权限"
+
+        if len(args) < 1:
+            return "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
+
+        action = args[0]
+
+        if action == "-l":
+            # 列出被禁言对象
+            return self._execute_admin_command("free", action, None, "", "")
+        elif action == "-u" and len(args) > 1:
+            # 解除用户禁言
+            target = args[1]
+            return self._confirm_and_execute_admin_command("free", action, None, target, "")
+        elif action == "-g" and len(args) > 1:
+            # 解除群组禁言
+            target = args[1]
+            return self._confirm_and_execute_admin_command("free", action, None, target, "")
+        else:
+            return "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
+
+    def _is_admin(self) -> bool:
+        """检查当前用户是否为管理员"""
+        from shared.constants import ADMIN_USER_ID
+        return hasattr(self.client, 'user_id') and self.client.user_id == ADMIN_USER_ID
+
+    def _confirm_and_execute_admin_command(self, command: str, action: str,
+                                         target_id: int = None, target_name: str = "",
+                                         new_value: str = "") -> str:
+        """确认并执行管理员命令"""
+        # 构建确认消息
+        if command == "user" and action == "-d":
+            confirm_msg = f"确认删除用户 {target_id}？这将删除用户的所有数据！(y/N): "
+        elif command == "group" and action == "-d":
+            confirm_msg = f"确认删除群组 {target_id}？这将删除群组的所有数据！(y/N): "
+        elif action in ["-u", "-g"] and command == "ban":
+            target_type = "用户" if action == "-u" else "群组"
+            confirm_msg = f"确认禁言{target_type} {target_name}？(y/N): "
+        else:
+            # 对于修改操作和解禁操作，直接执行
+            return self._execute_admin_command(command, action, target_id, target_name, new_value)
+
+        # 获取用户确认
+        try:
+            response = input(confirm_msg).strip().lower()
+            if response in ['y', 'yes']:
+                return self._execute_admin_command(command, action, target_id, target_name, new_value)
+            else:
+                return "操作已取消"
+        except (EOFError, KeyboardInterrupt):
+            return "操作已取消"
+
+    def _execute_admin_command(self, command: str, action: str,
+                             target_id: int = None, target_name: str = "",
+                             new_value: str = "") -> str:
+        """执行管理员命令"""
+        try:
+            # 发送管理员命令请求
+            success, message = self.client.send_admin_command(
+                command, action, target_id, target_name, new_value
+            )
+
+            if success:
+                return f"✓ {message}"
+            else:
+                return f"✗ {message}"
+
+        except Exception as e:
+            return f"✗ 命令执行失败: {e}"

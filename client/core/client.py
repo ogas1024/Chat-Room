@@ -397,6 +397,7 @@ class ChatClient:
         self.network_client = NetworkClient(host, port)
         self.current_user: Optional[Dict[str, Any]] = None
         self.current_chat_group: Optional[Dict[str, Any]] = None
+        self.user_id: Optional[int] = None  # 用于管理员权限检查
         
         # 设置消息处理器
         self._setup_message_handlers()
@@ -427,6 +428,12 @@ class ChatClient:
         self.network_client.set_message_handler(
             MessageType.SYSTEM_MESSAGE, self._handle_system_message
         )
+        self.network_client.set_message_handler(
+            MessageType.ADMIN_COMMAND_RESPONSE, self._handle_admin_command_response
+        )
+        self.network_client.set_message_handler(
+            MessageType.ADMIN_OPERATION_NOTIFICATION, self._handle_admin_operation_notification
+        )
     
     def connect(self) -> bool:
         """连接到服务器"""
@@ -437,6 +444,7 @@ class ChatClient:
         self.network_client.disconnect()
         self.current_user = None
         self.current_chat_group = None
+        self.user_id = None
     
     def login(self, username: str, password: str) -> tuple[bool, str]:
         """用户登录"""
@@ -463,6 +471,7 @@ class ChatClient:
                     'id': response.user_id,
                     'username': response.username
                 }
+                self.user_id = response.user_id  # 设置用户ID用于权限检查
                 # 设置当前聊天组（如果服务器提供了）
                 if hasattr(response, 'current_chat_group') and response.current_chat_group:
                     self.current_chat_group = response.current_chat_group
@@ -1112,3 +1121,74 @@ class ChatClient:
                 return False, response.error_message
 
         return False, "服务器无响应"
+
+    def send_admin_command(self, command: str, action: str, target_id: int = None,
+                          target_name: str = "", new_value: str = "") -> tuple[bool, str]:
+        """发送管理员命令
+
+        Args:
+            command: 命令类型 (user, group, ban, free)
+            action: 操作类型 (-d, -m, -u, -g, -l)
+            target_id: 目标ID (可选)
+            target_name: 目标名称 (可选)
+            new_value: 新值 (用于修改操作)
+        """
+        from shared.messages import AdminCommandRequest
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return False, "请先登录"
+
+        if not self.network_client.is_connected():
+            return False, "未连接到服务器"
+
+        # 发送管理员命令请求
+        request = AdminCommandRequest(
+            command=command,
+            action=action,
+            target_id=target_id,
+            target_name=target_name,
+            new_value=new_value
+        )
+
+        if not self.network_client.send_message(request):
+            return False, "发送请求失败"
+
+        # 等待响应
+        response = self.network_client.wait_for_response(
+            timeout=15.0,  # 管理员操作可能需要更长时间
+            message_types=[MessageType.ADMIN_COMMAND_RESPONSE, MessageType.ERROR_MESSAGE]
+        )
+
+        if response:
+            if response.message_type == MessageType.ADMIN_COMMAND_RESPONSE:
+                if hasattr(response, 'success') and response.success:
+                    return True, response.message or "操作成功"
+                else:
+                    return False, response.message or "操作失败"
+            elif hasattr(response, 'error_message'):
+                return False, response.error_message
+
+        return False, "服务器无响应"
+
+    def _handle_admin_command_response(self, message):
+        """处理管理员命令响应"""
+        pass  # 由wait_for_response处理
+
+    def _handle_admin_operation_notification(self, message):
+        """处理管理员操作通知"""
+        # 显示管理员操作通知
+        if hasattr(message, 'message') and message.message:
+            print(f"\n[管理员通知] {message.message}")
+
+        # 如果当前用户被操作，可能需要特殊处理
+        if hasattr(message, 'target_id') and self.current_user:
+            if message.target_id == self.current_user.get('id'):
+                if 'ban' in message.operation:
+                    print("⚠️  您已被管理员禁言")
+                elif 'unban' in message.operation:
+                    print("✅ 您的禁言已被解除")
+                elif 'delete' in message.operation:
+                    print("⚠️  您的账户已被管理员删除，连接将断开")
+                    # 可以考虑自动断开连接
+                    self.disconnect()
