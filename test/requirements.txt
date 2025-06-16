@@ -1,0 +1,207 @@
+# 测试依赖包
+# 用于Chat-Room项目的测试框架和工具
+
+# 核心测试框架
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-html>=3.1.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0
+pytest-timeout>=2.1.0
+
+# 异步测试支持
+pytest-asyncio>=0.21.0
+
+# 测试数据生成
+factory-boy>=3.2.0
+faker>=18.0.0
+
+# 性能测试
+pytest-benchmark>=4.0.0
+memory-profiler>=0.60.0
+psutil>=5.9.0
+
+# 网络测试
+responses>=0.23.0
+httpx>=0.24.0
+
+# 数据库测试
+pytest-postgresql>=4.1.0
+pytest-sqlite>=0.1.0
+
+# Mock和测试工具
+freezegun>=1.2.0
+testfixtures>=7.1.0
+
+# 代码质量检查
+flake8>=6.0.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+
+# 安全测试
+bandit>=1.7.0
+safety>=2.3.0
+
+# 文档测试
+doctest>=1.0.0
+
+# 测试报告增强
+pytest-json-report>=1.5.0
+pytest-metadata>=2.0.0
+allure-pytest>=2.12.0
+
+# 并行测试
+pytest-parallel>=0.1.0
+
+# 测试环境管理
+tox>=4.0.0
+nox>=2022.11.21
+
+# 持续集成支持
+coverage[toml]>=7.0.0
+codecov>=2.1.0
+
+# 测试数据库
+sqlite3  # 通常已包含在Python标准库中
+
+# 临时文件和目录管理
+tempfile  # Python标准库
+pathlib   # Python标准库
+
+# 日期时间测试
+python-dateutil>=2.8.0
+
+# 配置文件测试
+pyyaml>=6.0
+toml>=0.10.0
+
+# 网络模拟
+aioresponses>=0.7.0
+
+# 测试装饰器
+parameterized>=0.9.0
+
+# 测试数据验证
+cerberus>=1.3.0
+jsonschema>=4.17.0
+
+# 性能分析
+line-profiler>=4.0.0
+py-spy>=0.3.0
+
+# 内存泄漏检测
+pympler>=0.9.0
+
+# 测试环境隔离
+virtualenv>=20.0.0
+
+# 测试结果分析
+pytest-sugar>=0.9.0
+pytest-clarity>=1.0.0
+
+# 测试重试
+pytest-rerunfailures>=11.0.0
+
+# 测试标记
+pytest-markers>=1.0.0
+
+# 测试顺序
+pytest-order>=1.0.0
+
+# 测试依赖管理
+pytest-dependency>=0.5.0
+
+# 测试参数化增强
+pytest-cases>=3.6.0
+
+# 测试快照
+pytest-snapshot>=0.9.0
+
+# 测试数据比较
+deepdiff>=6.0.0
+
+# 测试日志
+pytest-logging>=2016.11.4
+
+# 测试配置
+pytest-env>=0.8.0
+
+# 测试插件开发
+pluggy>=1.0.0
+
+# 测试结果缓存
+pytest-cache>=1.0
+
+# 测试覆盖率增强
+coverage-badge>=1.1.0
+
+# 测试报告美化
+rich>=13.0.0
+colorama>=0.4.0
+
+# 测试数据序列化
+pickle5>=0.0.12; python_version < "3.8"
+
+# 测试时间控制
+time-machine>=2.9.0
+
+# 测试文件操作
+pyfakefs>=5.0.0
+
+# 测试网络请求
+requests-mock>=1.10.0
+
+# 测试WebSocket
+websockets>=11.0.0
+
+# 测试加密
+cryptography>=40.0.0
+
+# 测试压缩
+zstandard>=0.20.0
+
+# 测试图像处理（如果需要）
+Pillow>=9.5.0
+
+# 测试音频处理（如果需要）
+# pydub>=0.25.0
+
+# 测试视频处理（如果需要）
+# opencv-python>=4.7.0
+
+# 开发工具
+pre-commit>=3.0.0
+commitizen>=3.0.0
+
+# 文档生成
+sphinx>=6.0.0
+sphinx-rtd-theme>=1.2.0
+
+# API文档测试
+openapi-spec-validator>=0.5.0
+
+# 性能基准测试
+asv>=0.5.0
+
+# 测试数据可视化
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# 测试结果统计
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 测试环境监控
+watchdog>=3.0.0
+
+# 测试自动化
+invoke>=2.0.0
+
+# 测试容器化
+docker>=6.0.0
+
+# 测试云服务
+boto3>=1.26.0  # AWS
+azure-storage-blob>=12.14.0  # Azure
+google-cloud-storage>=2.8.0  # GCP

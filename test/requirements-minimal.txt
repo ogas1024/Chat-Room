@@ -1,0 +1,27 @@
+# 最小测试依赖包
+# Chat-Room项目测试的核心依赖
+
+# 核心测试框架
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-html>=3.1.0
+pytest-mock>=3.10.0
+
+# 性能测试基础
+psutil>=5.9.0
+
+# 测试工具
+freezegun>=1.2.0
+
+# 代码覆盖率
+coverage>=7.0.0
+
+# 配置文件支持
+pyyaml>=6.0
+
+# 测试数据生成
+faker>=18.0.0
+
+# 测试结果美化
+rich>=13.0.0
+colorama>=0.4.0

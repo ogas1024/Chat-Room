@@ -273,7 +273,16 @@ alice> 你好，这是私聊消息
    pip install -r requirements.txt
    ```
 
-2. **开发工具推荐**
+2. **安装测试依赖**
+   ```bash
+   # 安装最小测试依赖
+   pip install -r test/requirements-minimal.txt
+
+   # 或使用Makefile
+   make install-test
+   ```
+
+3. **开发工具推荐**
    - **IDE**: VS Code, PyCharm
    - **代码格式化**: black, flake8
    - **类型检查**: mypy
@@ -376,26 +385,71 @@ git commit -m "[文档]: 更新API文档和使用说明"
 
 ### 测试指南
 
-#### 单元测试
+Chat-Room项目提供完整的测试套件，包括单元测试、集成测试、功能测试和性能测试。
+
+#### 快速开始
 ```bash
+# 检查测试依赖
+make check-deps
+
 # 运行所有测试
-pytest
+make test
 
-# 运行特定模块测试
-pytest tests/test_user_manager.py
-
-# 生成覆盖率报告
-pytest --cov=server --cov=client --cov=shared
+# 或使用测试脚本
+python test/run_tests.py all
 ```
 
-#### 集成测试
+#### 测试类型
 ```bash
-# 启动测试服务器
-python -m server.main --port 8889
+# 单元测试 - 测试单个模块功能
+make test-unit
+python test/run_tests.py unit
 
-# 运行集成测试
-pytest tests/integration/
+# 集成测试 - 测试模块间交互
+make test-integration
+python test/run_tests.py integration
+
+# 功能测试 - 测试完整用户场景
+make test-functional
+python test/run_tests.py functional
+
+# 性能测试 - 测试系统性能
+make test-performance
+python test/run_tests.py performance
 ```
+
+#### 测试报告
+```bash
+# 生成覆盖率报告
+make test-coverage
+python test/run_tests.py coverage
+
+# 查看HTML报告
+open test/reports/coverage/index.html
+open test/reports/report.html
+```
+
+#### 特定测试
+```bash
+# 测试特定模块
+make test-server    # 服务器端测试
+make test-client    # 客户端测试
+make test-shared    # 共享模块测试
+
+# 按功能测试
+make test-database  # 数据库功能
+make test-ai        # AI功能
+make test-files     # 文件传输功能
+
+# 运行特定测试文件
+python test/run_tests.py -t test/unit/server/test_user_manager.py
+
+# 按标记运行测试
+python test/run_tests.py -m database
+python test/run_tests.py -m performance
+```
+
+详细测试文档请参考：[test/README.md](test/README.md)
 
 ### 调试技巧
 
