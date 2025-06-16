@@ -97,11 +97,11 @@ ALLOWED_FILE_EXTENSIONS = [
 DEFAULT_PUBLIC_CHAT = "public"
 
 # AI配置
-AI_USERNAME = "AI助手"
+AI_USERNAME = "AI"
 AI_USER_ID = -1  # 特殊用户ID，表示AI用户
 
 # 管理员配置
-ADMIN_USERNAME = "管理员"
+ADMIN_USERNAME = "Admin"
 ADMIN_USER_ID = 0  # 特殊用户ID，表示管理员用户
 
 # 命令前缀
