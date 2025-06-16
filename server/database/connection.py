@@ -55,13 +55,18 @@ def init_database(db_path: str = None):
     """初始化数据库"""
     if db_path:
         DatabaseConnection.set_database_path(db_path)
-    
+
     # 确保数据库目录存在
     db_path = DatabaseConnection._db_path
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
+
     # 获取实例会自动初始化数据库
     DatabaseConnection.get_instance()
+
+    # 运行数据库迁移
+    from server.database.migration import run_migration
+    run_migration(db_path)
+
     print(f"数据库初始化完成: {db_path}")
 
 

@@ -12,6 +12,7 @@ import time
 
 from server.core.user_manager import UserManager
 from server.core.chat_manager import ChatManager
+from server.core.admin_manager import AdminManager
 from server.ai.ai_manager import AIManager
 from server.config.ai_config import get_ai_config
 from server.database.connection import init_database
@@ -20,6 +21,7 @@ from server.utils.auth import (
     sanitize_message_content
 )
 from server.utils.common import ResponseHelper
+from server.utils.admin_auth import AdminPermissionChecker
 from shared.constants import (
     BUFFER_SIZE, MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
@@ -36,7 +38,8 @@ from shared.messages import (
     ListChatsRequest, ListChatsResponse, CreateChatRequest, CreateChatResponse,
     JoinChatRequest, FileInfo, FileUploadRequest, FileUploadResponse,
     FileDownloadRequest, FileDownloadResponse, FileListRequest, FileListResponse,
-    EnterChatRequest, EnterChatResponse, AIChatRequest, AIChatResponse
+    EnterChatRequest, EnterChatResponse, AIChatRequest, AIChatResponse,
+    AdminCommandRequest, AdminCommandResponse, AdminOperationNotification
 )
 from shared.exceptions import (
     AuthenticationError, UserAlreadyExistsError,
@@ -67,10 +70,14 @@ class ChatRoomServer:
         # 初始化管理器
         self.user_manager = UserManager()
         self.chat_manager = ChatManager(self.user_manager)
+        self.admin_manager = AdminManager()
 
         # 初始化AI管理器
         ai_config = get_ai_config()
         self.ai_manager = AIManager(ai_config.get_api_key())
+
+        # 权限检查器
+        self.permission_checker = AdminPermissionChecker(self.user_manager.db)
 
         # 响应助手
         self.response_helper = ResponseHelper()
@@ -226,6 +233,8 @@ class ChatRoomServer:
                 self.handle_file_list_request(client_socket, message)
             elif message.message_type == MessageType.AI_CHAT_REQUEST:
                 self.handle_ai_chat_request(client_socket, message)
+            elif message.message_type == MessageType.ADMIN_COMMAND_REQUEST:
+                self.handle_admin_command_request(client_socket, message)
             elif message.message_type == MessageType.LOGOUT_REQUEST:
                 self.handle_logout(client_socket)
             else:
@@ -357,6 +366,14 @@ class ChatRoomServer:
             content = sanitize_message_content(message.content)
             if not content:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "消息内容不能为空")
+                return
+
+            # 检查用户是否可以发送消息（禁言检查）
+            can_send, ban_error = self.permission_checker.can_send_message(
+                user_info['user_id'], message.chat_group_id
+            )
+            if not can_send:
+                self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, ban_error)
                 return
 
             # 记录消息发送
@@ -1040,3 +1057,74 @@ class ChatRoomServer:
             self.logger.error("AI聊天请求处理错误", error=str(e), exc_info=True)
             log_ai_operation("chat_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "AI聊天处理失败")
+
+    def handle_admin_command_request(self, client_socket: socket.socket, message: AdminCommandRequest):
+        """处理管理员命令请求"""
+        try:
+            # 验证用户登录
+            user_info = self.verify_user_login(client_socket)
+            if not user_info:
+                return
+
+            # 构建命令字符串
+            command_str = f"/{message.command} {message.action}"
+            if message.target_id:
+                command_str += f" {message.target_id}"
+            elif message.target_name:
+                command_str += f" {message.target_name}"
+            if message.new_value:
+                command_str += f" {message.new_value}"
+
+            # 处理管理员命令
+            success, response_message, data = self.admin_manager.handle_admin_command(
+                command_str, user_info['user_id'], user_info['username']
+            )
+
+            # 发送响应
+            response = AdminCommandResponse(
+                success=success,
+                message=response_message,
+                data=data
+            )
+            self.send_message(client_socket, response)
+
+            # 如果操作成功，广播通知（除了列表操作）
+            if success and message.action != "-l":
+                self._broadcast_admin_operation_notification(
+                    user_info, message, response_message
+                )
+
+        except Exception as e:
+            self.logger.error("管理员命令处理错误", error=str(e), exc_info=True)
+            self.send_error(client_socket, ErrorCode.SERVER_ERROR, "管理员命令处理失败")
+
+    def _broadcast_admin_operation_notification(self, operator_info: dict,
+                                              command: AdminCommandRequest,
+                                              message: str):
+        """广播管理员操作通知"""
+        try:
+            # 确定操作类型和目标类型
+            operation = f"{command.command}_{command.action}"
+            target_type = "user" if command.command in ["user", "ban", "free"] and command.action in ["-u"] else "group"
+
+            # 创建通知消息
+            notification = AdminOperationNotification(
+                operation=operation,
+                operator_id=operator_info['user_id'],
+                operator_name=operator_info['username'],
+                target_type=target_type,
+                target_id=command.target_id or 0,
+                target_name=command.target_name or "",
+                message=message
+            )
+
+            # 广播给所有在线用户（除了操作者）
+            for user_id, socket_obj in self.user_manager.online_users.items():
+                if user_id != operator_info['user_id']:
+                    try:
+                        self.send_message(socket_obj, notification)
+                    except Exception as e:
+                        self.logger.warning(f"向用户 {user_id} 发送管理员操作通知失败: {e}")
+
+        except Exception as e:
+            self.logger.error(f"广播管理员操作通知失败: {e}", exc_info=True)

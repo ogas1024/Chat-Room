@@ -54,6 +54,7 @@ class DatabaseManager:
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     is_online INTEGER DEFAULT 0,
+                    is_banned INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -64,6 +65,7 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL,
                     is_private_chat INTEGER DEFAULT 0,
+                    is_banned INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -118,6 +120,9 @@ class DatabaseManager:
 
             # 创建AI用户
             self._create_ai_user(conn)
+
+            # 创建管理员用户
+            self._create_admin_user(conn)
     
     def _create_default_public_chat(self, conn: sqlite3.Connection):
         """创建默认的公频聊天组"""
@@ -163,6 +168,37 @@ class DatabaseManager:
 
         conn.commit()
         print(f"✅ AI用户 '{AI_USERNAME}' 已创建并加入所有聊天组")
+
+    def _create_admin_user(self, conn: sqlite3.Connection):
+        """创建管理员用户"""
+        from shared.constants import ADMIN_USER_ID, ADMIN_USERNAME
+
+        cursor = conn.cursor()
+
+        # 检查管理员用户是否已存在
+        cursor.execute("SELECT id FROM users WHERE id = ?", (ADMIN_USER_ID,))
+        if cursor.fetchone():
+            return  # 管理员用户已存在
+
+        # 创建管理员用户，使用特殊的ID=0
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (id, username, password_hash, is_online) VALUES (?, ?, ?, ?)",
+            (ADMIN_USER_ID, ADMIN_USERNAME, self.hash_password("admin123"), 0)  # 管理员默认离线
+        )
+
+        # 将管理员用户添加到所有聊天组
+        cursor.execute("SELECT id FROM chat_groups")
+        chat_groups = cursor.fetchall()
+
+        for group in chat_groups:
+            group_id = group[0]
+            cursor.execute(
+                "INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)",
+                (group_id, ADMIN_USER_ID)
+            )
+
+        conn.commit()
+        print(f"✅ 管理员用户 '{ADMIN_USERNAME}' 已创建并加入所有聊天组")
     
     @staticmethod
     def hash_password(password: str) -> str:
@@ -485,3 +521,185 @@ class DatabaseManager:
                 WHERE id = ?
             ''', (message_id, file_id))
             conn.commit()
+
+    # ==================== 管理员功能相关方法 ====================
+
+    def is_admin_user(self, user_id: int) -> bool:
+        """检查用户是否为管理员"""
+        from shared.constants import ADMIN_USER_ID
+        return user_id == ADMIN_USER_ID
+
+    def ban_user(self, user_id: int):
+        """禁言用户"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET is_banned = 1 WHERE id = ?",
+                (user_id,)
+            )
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户被禁言", user_id=user_id)
+            log_database_operation("ban", "users", user_id=user_id)
+
+    def unban_user(self, user_id: int):
+        """解除用户禁言"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET is_banned = 0 WHERE id = ?",
+                (user_id,)
+            )
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户解除禁言", user_id=user_id)
+            log_database_operation("unban", "users", user_id=user_id)
+
+    def is_user_banned(self, user_id: int) -> bool:
+        """检查用户是否被禁言"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT is_banned FROM users WHERE id = ?",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            return bool(row["is_banned"]) if row else False
+
+    def ban_chat_group(self, group_id: int):
+        """禁言聊天组"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE chat_groups SET is_banned = 1 WHERE id = ?",
+                (group_id,)
+            )
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组被禁言", group_id=group_id)
+            log_database_operation("ban", "chat_groups", group_id=group_id)
+
+    def unban_chat_group(self, group_id: int):
+        """解除聊天组禁言"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE chat_groups SET is_banned = 0 WHERE id = ?",
+                (group_id,)
+            )
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组解除禁言", group_id=group_id)
+            log_database_operation("unban", "chat_groups", group_id=group_id)
+
+    def is_chat_group_banned(self, group_id: int) -> bool:
+        """检查聊天组是否被禁言"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT is_banned FROM chat_groups WHERE id = ?",
+                (group_id,)
+            )
+            row = cursor.fetchone()
+            return bool(row["is_banned"]) if row else False
+
+    def delete_user(self, user_id: int):
+        """删除用户（管理员操作）"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 先删除相关的外键记录
+            cursor.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM messages WHERE sender_id = ?", (user_id,))
+            cursor.execute("DELETE FROM files_metadata WHERE uploader_id = ?", (user_id,))
+
+            # 删除用户记录
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户被删除", user_id=user_id)
+            log_database_operation("delete", "users", user_id=user_id)
+
+    def delete_chat_group(self, group_id: int):
+        """删除聊天组（管理员操作）"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 先删除相关的外键记录
+            cursor.execute("DELETE FROM group_members WHERE group_id = ?", (group_id,))
+            cursor.execute("DELETE FROM messages WHERE group_id = ?", (group_id,))
+            cursor.execute("DELETE FROM files_metadata WHERE chat_group_id = ?", (group_id,))
+
+            # 删除聊天组记录
+            cursor.execute("DELETE FROM chat_groups WHERE id = ?", (group_id,))
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组被删除", group_id=group_id)
+            log_database_operation("delete", "chat_groups", group_id=group_id)
+
+    def get_banned_users(self) -> List[Dict[str, Any]]:
+        """获取被禁言的用户列表"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, username FROM users WHERE is_banned = 1 ORDER BY username"
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_banned_chat_groups(self) -> List[Dict[str, Any]]:
+        """获取被禁言的聊天组列表"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, name FROM chat_groups WHERE is_banned = 1 ORDER BY name"
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def update_user_info(self, user_id: int, username: str = None, password: str = None):
+        """更新用户信息（管理员操作）"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            if username:
+                cursor.execute(
+                    "UPDATE users SET username = ? WHERE id = ?",
+                    (username, user_id)
+                )
+
+            if password:
+                password_hash = self.hash_password(password)
+                cursor.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
+                    (password_hash, user_id)
+                )
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户信息被更新", user_id=user_id, username=username)
+            log_database_operation("update", "users", user_id=user_id, username=username)
+
+    def update_chat_group_info(self, group_id: int, name: str = None):
+        """更新聊天组信息（管理员操作）"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            if name:
+                cursor.execute(
+                    "UPDATE chat_groups SET name = ? WHERE id = ?",
+                    (name, group_id)
+                )
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组信息被更新", group_id=group_id, name=name)
+            log_database_operation("update", "chat_groups", group_id=group_id, name=name)

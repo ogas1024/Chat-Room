@@ -62,7 +62,12 @@ class MessageType:
     # AI相关
     AI_CHAT_REQUEST = "ai_chat_request"
     AI_CHAT_RESPONSE = "ai_chat_response"
-    
+
+    # 管理员相关
+    ADMIN_COMMAND_REQUEST = "admin_command_request"
+    ADMIN_COMMAND_RESPONSE = "admin_command_response"
+    ADMIN_OPERATION_NOTIFICATION = "admin_operation_notification"
+
     # 系统消息
     SYSTEM_MESSAGE = "system_message"
     ERROR_MESSAGE = "error_message"
@@ -85,7 +90,7 @@ FILE_CHUNK_SIZE = 8192  # 文件传输块大小（8KB）
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 最大文件大小（100MB）
 ALLOWED_FILE_EXTENSIONS = [
     '.txt', '.doc', '.docx', '.pdf', '.jpg', '.jpeg', '.png', '.gif',
-    '.mp3', '.mp4', '.avi', '.zip', '.rar', '.py', '.js', '.html', '.css'
+    '.mp3', '.mp4', '.avi', '.zip', '.rar', '.py', '.js', '.html', '.css', '.md'
 ]
 
 # 默认聊天组
@@ -94,6 +99,10 @@ DEFAULT_PUBLIC_CHAT = "public"
 # AI配置
 AI_USERNAME = "AI助手"
 AI_USER_ID = -1  # 特殊用户ID，表示AI用户
+
+# 管理员配置
+ADMIN_USERNAME = "管理员"
+ADMIN_USER_ID = 0  # 特殊用户ID，表示管理员用户
 
 # 命令前缀
 COMMAND_PREFIX = "/"

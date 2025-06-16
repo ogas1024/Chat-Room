@@ -96,6 +96,28 @@ Alice					<Sat May 24 23:12:36 CST 2025>
 * `/exit`
 
   * 退出系统, 将状态更新为离线。
+  
+* 当用户`id`为`0`时, 表明为特殊用户管理员, 当且仅当用户`id==0`时拥有以下命令
+
+  * `/user {options} {user_id}`: 对用户的增删改查
+    * `-d`: 在数据库中删除用户
+      * `{user_id}` 为可变长参数, 管理员可以同时对多个对象进行操作
+      * 删除之前记得确认
+    * `-m`: 修改用户昵称`username`, 密码 (交互式修改)
+  * `/group {options} {group_id}`: 对群组的增删改查
+    * `-d`: 在数据库中删除群组
+      * `{user_id}` 为可变长参数, 管理员可以同时对多个对象进行操作
+      * 删除之前记得确认
+    * `-m`: 修改群组名称`name` (交互式修改)
+  * `/ban {options} {argues}`: 禁言
+    * `-u {username}`: 将用户名为 `{username}` 的用户进行禁言 (在任何聊天组中都无法发送信息)
+    * `-g {name}`: 将聊天组名字为 `{name}` 的聊天组进行全组禁言 (除了管理员外的任何用户都不能在这个聊天组中发言, 但是用户能在其他没有被ban的聊天组中发言)
+    * `{argues}` 为可变长参数, 管理员可以同时对多个对象进行操作
+  * `/free {options} {argues}`: 解除禁言
+    * `-u {username}`: 将用户名为 `{username}` 的用户解除禁言
+    * `-g {name}`: 解除聊天组名字为 `{name}` 的全组禁言
+    * `-l`: 按照良好的格式输出被ban的用户和聊天组
+    * `{argues}` 为可变长参数, 管理员可以同时对多个对象进行操作
 
 ------
 
@@ -117,9 +139,11 @@ Alice					<Sat May 24 23:12:36 CST 2025>
   * `username` (TEXT, UNIQUE, NOT NULL)
   * `password_hash` (TEXT, NOT NULL)
   * `is_online` (INTEGER, DEFAULT 0) -- 0 for offline, 1 for online
+  * `is_banned` (INTEGER, DEFAULT 0) -- 0 for banned, 1 for not
 * `chat_groups`
   * `id` (INTEGER, PRIMARY KEY, AUTOINCREMENT)
   * `name` (TEXT, UNIQUE, NOT NULL) -- 聊天组别名
+  * `is_banned` (INTEGER, DEFAULT 0) -- 0 for banned, 1 for not
   * `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
 * `group_members`
   * `group_id` (INTEGER, FOREIGN KEY (`chat_groups.id`))

@@ -386,6 +386,39 @@ class ChatHistoryComplete(BaseMessage):
     message_count: int = 0  # 加载的历史消息数量
 
 
+@dataclass
+class AdminCommandRequest(BaseMessage):
+    """管理员命令请求"""
+    message_type: str = MessageType.ADMIN_COMMAND_REQUEST
+    command: str = ""  # user, group, ban, free
+    action: str = ""  # -d, -m, -u, -g, -l
+    target_id: Optional[int] = None  # 目标用户ID或群组ID
+    target_name: str = ""  # 目标用户名或群组名
+    new_value: str = ""  # 新的值（用于修改操作）
+
+
+@dataclass
+class AdminCommandResponse(BaseMessage):
+    """管理员命令响应"""
+    message_type: str = MessageType.ADMIN_COMMAND_RESPONSE
+    success: bool = False
+    message: str = ""
+    data: Optional[Dict[str, Any]] = None  # 返回的数据（如列表）
+
+
+@dataclass
+class AdminOperationNotification(BaseMessage):
+    """管理员操作通知"""
+    message_type: str = MessageType.ADMIN_OPERATION_NOTIFICATION
+    operation: str = ""  # 操作类型：ban_user, unban_user, delete_user, etc.
+    operator_id: int = 0  # 操作者ID
+    operator_name: str = ""  # 操作者用户名
+    target_type: str = ""  # 目标类型：user, group
+    target_id: int = 0  # 目标ID
+    target_name: str = ""  # 目标名称
+    message: str = ""  # 操作描述
+
+
 def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
     """根据消息类型创建对应的消息对象"""
     message_type = data.get('message_type')
@@ -417,6 +450,9 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.FILE_DOWNLOAD_RESPONSE: FileDownloadResponse,
         MessageType.AI_CHAT_REQUEST: AIChatRequest,
         MessageType.AI_CHAT_RESPONSE: AIChatResponse,
+        MessageType.ADMIN_COMMAND_REQUEST: AdminCommandRequest,
+        MessageType.ADMIN_COMMAND_RESPONSE: AdminCommandResponse,
+        MessageType.ADMIN_OPERATION_NOTIFICATION: AdminOperationNotification,
         MessageType.SYSTEM_MESSAGE: SystemMessage,
         MessageType.ERROR_MESSAGE: ErrorMessage,
     }
