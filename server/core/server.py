@@ -21,8 +21,7 @@ from server.utils.auth import (
 )
 from server.utils.common import ResponseHelper
 from shared.constants import (
-    DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE, MAX_CONNECTIONS,
-    MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
+    BUFFER_SIZE, MessageType, ErrorCode, FILES_STORAGE_PATH, FILE_CHUNK_SIZE,
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
 )
 from shared.logger import (
@@ -47,12 +46,18 @@ from shared.exceptions import (
 
 class ChatRoomServer:
     """聊天室服务器"""
-    
-    def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+
+    def __init__(self, host: str = None, port: int = None):
         """初始化服务器"""
-        self.host = host
-        self.port = port
-        self.max_connections = MAX_CONNECTIONS
+        # 获取服务器配置
+        from server.config.server_config import get_server_config
+        self.server_config = get_server_config()
+
+        # 使用配置文件中的值，如果没有传入参数的话
+        self.host = host if host is not None else self.server_config.get_server_host()
+        self.port = port if port is not None else self.server_config.get_server_port()
+        self.max_connections = self.server_config.get_max_connections()
+
         self.server_socket = None
         self.running = False
 
@@ -70,8 +75,8 @@ class ChatRoomServer:
         # 响应助手
         self.response_helper = ResponseHelper()
 
-        self.logger.info("服务器初始化完成", host=host, port=port, max_connections=MAX_CONNECTIONS)
-        print(f"聊天室服务器初始化完成 - {host}:{port}")
+        self.logger.info("服务器初始化完成", host=self.host, port=self.port, max_connections=self.max_connections)
+        print(f"聊天室服务器初始化完成 - {self.host}:{self.port}")
     
     def start(self):
         """启动服务器"""
@@ -85,14 +90,14 @@ class ChatRoomServer:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.bind((self.host, self.port))
-            self.server_socket.listen(MAX_CONNECTIONS)
+            self.server_socket.listen(self.max_connections)
 
             self.running = True
-            self.logger.info("服务器启动成功", host=self.host, port=self.port, max_connections=MAX_CONNECTIONS)
+            self.logger.info("服务器启动成功", host=self.host, port=self.port, max_connections=self.max_connections)
             log_network_event("server_started", client_ip=None, host=self.host, port=self.port)
 
             print(f"服务器启动成功，监听 {self.host}:{self.port}")
-            print(f"最大连接数: {MAX_CONNECTIONS}")
+            print(f"最大连接数: {self.max_connections}")
 
             # 接受客户端连接
             while self.running:

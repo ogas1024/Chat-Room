@@ -8,18 +8,23 @@ import threading
 import time
 from typing import Callable, Optional, Dict, Any, List
 
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT, BUFFER_SIZE
+from shared.constants import BUFFER_SIZE
 from shared.messages import BaseMessage, parse_message
 from shared.logger import get_logger
 
 
 class NetworkClient:
     """网络客户端"""
-    
-    def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+
+    def __init__(self, host: str = None, port: int = None):
         """初始化网络客户端"""
-        self.host = host
-        self.port = port
+        # 获取客户端配置
+        from client.config.client_config import get_client_config
+        client_config = get_client_config()
+
+        # 使用配置文件中的值，如果没有传入参数的话
+        self.host = host if host is not None else client_config.get_default_host()
+        self.port = port if port is not None else client_config.get_default_port()
         self.socket: Optional[socket.socket] = None
         self.connected = False
         self.running = False
@@ -386,8 +391,8 @@ class NetworkClient:
 
 class ChatClient:
     """聊天客户端（高级封装）"""
-    
-    def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+
+    def __init__(self, host: str = None, port: int = None):
         """初始化聊天客户端"""
         self.network_client = NetworkClient(host, port)
         self.current_user: Optional[Dict[str, Any]] = None

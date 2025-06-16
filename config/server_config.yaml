@@ -37,7 +37,7 @@ file_storage:
   cleanup_interval: 86400
 ai:
   enabled: true
-  api_key: '324216afd1584a88b1a3b0d532b897eb.cm74bxxiHWhSsKZE'
+  api_key: 324216afd1584a88b1a3b0d532b897eb.cm74bxxiHWhSsKZE
   model: glm-4-flash
   max_tokens: 1024
   temperature: 0.7
@@ -70,7 +70,6 @@ logging:
   file_max_size: 10485760
   file_backup_count: 5
   console_enabled: true
-  # 详细日志配置
   categories:
     database:
       enabled: true
@@ -92,19 +91,17 @@ logging:
       enabled: true
       level: INFO
       file_path: logs/server/network.log
-  # 日志保留策略
   retention:
     days: 30
     max_size_gb: 1.0
-  # 敏感信息脱敏
   sanitization:
     enabled: true
     patterns:
-      - password
-      - api_key
-      - token
-      - secret
-      - auth
+    - password
+    - api_key
+    - token
+    - secret
+    - auth
 security:
   password_min_length: 6
   password_hash_rounds: 12
