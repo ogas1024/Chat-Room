@@ -21,17 +21,17 @@
 | 文档 | 内容 | 状态 | 预计时间 |
 |------|------|------|----------|
 | [语法基础](01-python-basics/syntax-fundamentals.md) | 变量、控制结构、函数、异常 | ✅ 完成 | 3天 |
-| [数据结构](01-python-basics/data-structures.md) | 列表、字典、集合高级用法 | 📝 待创建 | 2天 |
-| [函数模块](01-python-basics/functions-modules.md) | 装饰器、模块组织、包管理 | 📝 待创建 | 2天 |
-| [面向对象](01-python-basics/oop-basics.md) | 类、继承、多态、设计模式 | 📝 待创建 | 3天 |
+| [数据结构](01-python-basics/data-structures.md) | 列表、字典、集合高级用法 | ✅ 完成 | 2天 |
+| [函数模块](01-python-basics/functions-modules.md) | 装饰器、模块组织、包管理 | ✅ 完成 | 2天 |
+| [面向对象](01-python-basics/oop-basics.md) | 类、继承、多态、设计模式 | ✅ 完成 | 3天 |
 
 ### 🌐 第2章：Socket网络编程
 | 文档 | 内容 | 状态 | 预计时间 |
 |------|------|------|----------|
 | [网络概念](02-socket-programming/network-concepts.md) | TCP/IP、客户端-服务器架构 | ✅ 完成 | 2天 |
-| [TCP基础](02-socket-programming/tcp-basics.md) | 连接建立、数据传输、关闭 | 📝 待创建 | 3天 |
-| [Socket API](02-socket-programming/socket-api.md) | Python Socket编程接口 | 📝 待创建 | 3天 |
-| [简单通信](02-socket-programming/simple-client-server.md) | 基础客户端-服务器实现 | 📝 待创建 | 2天 |
+| [TCP基础](02-socket-programming/tcp-basics.md) | 连接建立、数据传输、关闭 | ✅ 完成 | 3天 |
+| [Socket API](02-socket-programming/socket-api.md) | Python Socket编程接口 | ✅ 完成 | 3天 |
+| [简单通信](02-socket-programming/simple-client-server.md) | 基础客户端-服务器实现 | ✅ 完成 | 2天 |
 
 ### 💬 第3章：简单聊天室
 | 文档 | 内容 | 状态 | 预计时间 |
@@ -165,9 +165,9 @@ graph LR
 ## 📊 学习统计
 
 ### 文档完成情况
-- **已完成**：5/48 (10.4%)
+- **已完成**：11/48 (22.9%)
 - **进行中**：0/48 (0%)
-- **待创建**：43/48 (89.6%)
+- **待创建**：37/48 (77.1%)
 
 ### 预计学习时间
 - **总时间**：60-90天
@@ -212,4 +212,4 @@ graph LR
 
 **选择适合您的学习路径，开始Chat-Room学习之旅！** 🚀
 
-*文档索引最后更新：2024-01-05*
+*文档索引最后更新：2024-01-06*
