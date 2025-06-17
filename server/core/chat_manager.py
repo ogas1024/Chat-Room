@@ -115,16 +115,27 @@ class ChatManager:
     def send_message(self, sender_id: int, group_id: int, content: str) -> ChatMessage:
         """发送消息"""
         from shared.constants import AI_USER_ID
+        from server.utils.admin_auth import AdminPermissionChecker
 
         # AI用户特殊处理：确保AI用户在所有聊天组中
         if sender_id == AI_USER_ID:
             # 确保AI用户在该聊天组中
             if not self.db.is_user_in_chat_group(group_id, sender_id):
                 self.db.add_user_to_chat_group(group_id, sender_id)
+
+            # AI用户也需要检查聊天组是否被禁言
+            if self.db.is_chat_group_banned(group_id):
+                raise PermissionDeniedError("该聊天组已被禁言，AI无法发送消息")
         else:
             # 普通用户需要验证权限
             if not self.db.is_user_in_chat_group(group_id, sender_id):
                 raise PermissionDeniedError("您不在此聊天组中")
+
+            # 检查用户和聊天组的禁言状态
+            permission_checker = AdminPermissionChecker(self.db)
+            can_send, ban_error = permission_checker.can_send_message(sender_id, group_id)
+            if not can_send:
+                raise PermissionDeniedError(ban_error)
 
         # 获取发送者和聊天组信息
         sender_info = self.db.get_user_by_id(sender_id)

@@ -27,9 +27,9 @@ from shared.constants import (
     MAX_FILE_SIZE, ALLOWED_FILE_EXTENSIONS, AI_USER_ID
 )
 from shared.logger import (
-    get_logger, log_event, log_network_event, log_user_action,
+    get_logger, log_network_event, log_user_action,
     log_database_operation, log_ai_operation, log_security_event,
-    log_performance, log_file_operation, log_function_call
+    log_file_operation
 )
 from shared.messages import (
     parse_message, BaseMessage, LoginRequest, LoginResponse,
@@ -83,7 +83,6 @@ class ChatRoomServer:
         self.response_helper = ResponseHelper()
 
         self.logger.info("服务器初始化完成", host=self.host, port=self.port, max_connections=self.max_connections)
-        print(f"聊天室服务器初始化完成 - {self.host}:{self.port}")
     
     def start(self):
         """启动服务器"""
@@ -103,9 +102,6 @@ class ChatRoomServer:
             self.logger.info("服务器启动成功", host=self.host, port=self.port, max_connections=self.max_connections)
             log_network_event("server_started", client_ip=None, host=self.host, port=self.port)
 
-            print(f"服务器启动成功，监听 {self.host}:{self.port}")
-            print(f"最大连接数: {self.max_connections}")
-
             # 接受客户端连接
             while self.running:
                 try:
@@ -115,7 +111,6 @@ class ChatRoomServer:
 
                     self.logger.info("新客户端连接", client_ip=client_ip, client_port=client_port)
                     log_network_event("client_connected", client_ip=client_ip, client_port=client_port)
-                    print(f"新客户端连接: {client_address}")
 
                     # 为每个客户端创建处理线程
                     client_thread = threading.Thread(
@@ -141,7 +136,7 @@ class ChatRoomServer:
         self.running = False
         if self.server_socket:
             self.server_socket.close()
-        print("服务器已停止")
+        self.logger.info("服务器已停止")
     
     def handle_client(self, client_socket: socket.socket, client_address):
         """处理客户端连接"""
@@ -194,7 +189,6 @@ class ChatRoomServer:
 
             self.logger.info("客户端连接已关闭", client_ip=client_ip, client_port=client_port)
             log_network_event("client_disconnected", client_ip=client_ip)
-            print(f"客户端 {client_address} 连接已关闭")
     
     def process_message(self, client_socket: socket.socket, message_str: str):
         """处理单条消息"""
@@ -416,12 +410,21 @@ class ChatRoomServer:
                                    chat_group_id=message.chat_group_id,
                                    response_time=ai_response_time)
 
-                    # 创建AI回复消息
-                    ai_message = self.chat_manager.send_message(
-                        AI_USER_ID, message.chat_group_id, ai_reply
-                    )
-                    # 广播AI回复
-                    self.chat_manager.broadcast_message_to_group(ai_message)
+                    try:
+                        # 创建AI回复消息（会自动检查聊天组禁言状态）
+                        ai_message = self.chat_manager.send_message(
+                            AI_USER_ID, message.chat_group_id, ai_reply
+                        )
+                        # 广播AI回复
+                        self.chat_manager.broadcast_message_to_group(ai_message)
+                    except PermissionDeniedError as e:
+                        # AI回复被禁言限制阻止，记录日志但不影响用户消息发送
+                        self.logger.info("AI回复被禁言限制阻止",
+                                       chat_group_id=message.chat_group_id,
+                                       reason=str(e))
+                        log_ai_operation("reply_blocked", "glm-4-flash",
+                                       chat_group_id=message.chat_group_id,
+                                       reason=str(e))
 
         except PermissionDeniedError as e:
             self.logger.warning("消息发送权限被拒绝",
