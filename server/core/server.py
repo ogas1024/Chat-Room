@@ -74,7 +74,7 @@ class ChatRoomServer:
 
         # 初始化AI管理器
         ai_config = get_ai_config()
-        self.ai_manager = AIManager(ai_config.get_api_key())
+        self.ai_manager = AIManager(config=ai_config)
 
         # 权限检查器
         self.permission_checker = AdminPermissionChecker(self.user_manager.db)

@@ -54,7 +54,7 @@ ai:
   - 机器人
   - 智能
   - 问答
-  require_at_mention: false
+  require_at_mention: true
   available_models:
   - glm-4-flash
   - glm-4

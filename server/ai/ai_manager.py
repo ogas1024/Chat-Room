@@ -15,20 +15,40 @@ from shared.constants import AI_USERNAME, AI_USER_ID
 class AIManager:
     """AI管理器"""
     
-    def __init__(self, api_key: str = None):
+    def __init__(self, config=None, api_key: str = None):
         """
         初始化AI管理器
-        
+
         Args:
-            api_key: 智谱AI API密钥
+            config: AI配置对象（AIConfig实例）
+            api_key: 智谱AI API密钥（向后兼容）
         """
+        # 导入配置类
+        from server.config.ai_config import AIConfig, get_ai_config
+
+        # 处理配置参数
+        if config is None:
+            if api_key is not None:
+                # 向后兼容：使用传入的API密钥
+                self.config = get_ai_config()
+                self.config.api_key = api_key
+            else:
+                # 使用默认配置
+                self.config = get_ai_config()
+        else:
+            # 使用传入的配置对象
+            self.config = config
+
         self.zhipu_client = None
-        self.context_manager = ContextManager()
+        self.context_manager = ContextManager(
+            max_context_length=self.config.max_context_length,
+            context_timeout=self.config.context_timeout
+        )
         self.enabled = False
-        
+
         # 尝试初始化智谱客户端
         try:
-            self.zhipu_client = ZhipuClient(api_key)
+            self.zhipu_client = ZhipuClient(self.config.api_key)
             if self.zhipu_client.test_connection():
                 self.enabled = True
                 print("✅ AI功能已启用")
@@ -37,51 +57,59 @@ class AIManager:
         except Exception as e:
             print(f"❌ AI初始化失败: {e}")
             print("💡 请设置环境变量 ZHIPU_API_KEY 或在配置中提供API密钥")
-        
+
         # 启动定期清理任务
         if self.enabled:
             self._start_cleanup_task()
     
     def is_enabled(self) -> bool:
         """检查AI功能是否启用"""
-        return self.enabled and self.zhipu_client is not None
+        # 检查配置中的启用状态和内部启用状态
+        config_enabled = getattr(self.config, 'enabled', True)
+        return config_enabled and self.enabled and self.zhipu_client is not None
     
-    def should_respond_to_message(self, message_content: str, 
+    def should_respond_to_message(self, message_content: str,
                                  is_group_chat: bool = True) -> bool:
         """
         判断是否应该回复消息
-        
+
         Args:
             message_content: 消息内容
             is_group_chat: 是否为群聊
-            
+
         Returns:
             是否应该回复
         """
         if not self.is_enabled():
             return False
-        
+
         # 私聊中总是回复
         if not is_group_chat:
             return True
-        
-        # 群聊中检查是否@AI或包含AI关键词
+
+        # 群聊中的回复逻辑
         message_lower = message_content.lower()
-        
+
+        # 检查是否要求@AI才回复
+        if self.config.require_at_mention:
+            # 只有明确@AI时才回复（大小写不敏感）
+            return ("@ai" in message_lower or
+                   f"@{AI_USERNAME.lower()}" in message_lower)
+
+        # 如果不要求@AI，则使用原有的多种触发条件
         # 检查@AI
         if f"@{AI_USERNAME.lower()}" in message_lower or "@ai" in message_lower:
             return True
-        
+
         # 检查AI相关关键词
-        ai_keywords = ["ai", "人工智能", "助手", "机器人", "智能", "问答"]
-        for keyword in ai_keywords:
-            if keyword in message_lower:
+        for keyword in self.config.trigger_keywords:
+            if keyword.lower() in message_lower:
                 return True
-        
+
         # 检查问号结尾的问题
         if message_content.strip().endswith("?") or message_content.strip().endswith("？"):
             return True
-        
+
         return False
     
     def process_message(self, user_id: int, username: str, message_content: str,
