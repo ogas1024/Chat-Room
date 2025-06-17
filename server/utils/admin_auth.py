@@ -88,52 +88,53 @@ def check_chat_group_ban_status(db_manager, group_id: int) -> tuple[bool, str]:
 
 def validate_admin_command(command: str, action: str) -> tuple[bool, str]:
     """
-    验证管理员命令格式
-    
+    验证管理员命令格式（新架构）
+
     Args:
-        command: 命令类型 (user, group, ban, free)
-        action: 操作类型 (-d, -m, -u, -g, -l)
-        
+        command: 操作类型 (add, del, modify, ban, free)
+        action: 对象类型 (-u, -g, -f, -l)
+
     Returns:
         (是否有效, 错误信息)
     """
     valid_commands = {
-        "user": ["-d", "-m"],  # 删除用户, 修改用户信息
-        "group": ["-d", "-m"],  # 删除群组, 修改群组信息
+        "add": ["-u"],  # 新增用户
+        "del": ["-u", "-g", "-f"],  # 删除用户, 删除群组, 删除文件
+        "modify": ["-u", "-g"],  # 修改用户信息, 修改群组信息
         "ban": ["-u", "-g"],  # 禁言用户, 禁言群组
         "free": ["-u", "-g", "-l"]  # 解除用户禁言, 解除群组禁言, 列出被禁言对象
     }
-    
+
     if command not in valid_commands:
-        return False, f"无效的命令类型: {command}"
-    
+        return False, f"无效的操作类型: {command}。支持的操作: {', '.join(valid_commands.keys())}"
+
     if action not in valid_commands[command]:
-        return False, f"命令 {command} 不支持操作 {action}"
-    
+        return False, f"操作 {command} 不支持对象类型 {action}。支持的对象类型: {', '.join(valid_commands[command])}"
+
     return True, ""
 
 
 def parse_admin_command(command_str: str) -> tuple[str, str, list]:
     """
-    解析管理员命令字符串
-    
+    解析管理员命令字符串（新架构）
+
     Args:
-        command_str: 命令字符串，如 "/user -d 123" 或 "/ban -u username"
-        
+        command_str: 命令字符串，如 "/del -u 123" 或 "/ban -u username"
+
     Returns:
-        (命令类型, 操作类型, 参数列表)
+        (操作类型, 对象类型, 参数列表)
     """
     parts = command_str.strip().split()
-    
+
     if len(parts) < 2:
         return "", "", []
-    
+
     # 移除命令前缀 "/"
-    command = parts[0].lstrip("/")
-    action = parts[1]
+    operation = parts[0].lstrip("/")
+    object_type = parts[1]
     args = parts[2:] if len(parts) > 2 else []
-    
-    return command, action, args
+
+    return operation, object_type, args
 
 
 def is_admin_user(user_id: int) -> bool:

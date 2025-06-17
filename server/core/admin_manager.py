@@ -24,83 +24,147 @@ class AdminManager:
     
     def handle_admin_command(self, command_str: str, operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        处理管理员命令
-        
+        处理管理员命令（新架构）
+
         Args:
-            command_str: 命令字符串
+            command_str: 命令字符串，如 "/del -u 123" 或 "/add -u"
             operator_id: 操作者ID
             operator_name: 操作者用户名
-            
+
         Returns:
             (是否成功, 消息, 数据)
         """
         try:
             # 解析命令
-            command, action, args = parse_admin_command(command_str)
-            
+            operation, object_type, args = parse_admin_command(command_str)
+
             # 验证命令格式
-            valid, error_msg = validate_admin_command(command, action)
+            valid, error_msg = validate_admin_command(operation, object_type)
             if not valid:
                 return False, error_msg, None
-            
+
             # 检查权限
-            can_perform, perm_error = self.permission_checker.can_perform_admin_operation(operator_id, f"{command}_{action}")
+            can_perform, perm_error = self.permission_checker.can_perform_admin_operation(operator_id, f"{operation}_{object_type}")
             if not can_perform:
                 return False, perm_error, None
-            
+
             # 执行命令
-            if command == "user":
-                return self._handle_user_command(action, args, operator_id, operator_name)
-            elif command == "group":
-                return self._handle_group_command(action, args, operator_id, operator_name)
-            elif command == "ban":
-                return self._handle_ban_command(action, args, operator_id, operator_name)
-            elif command == "free":
-                return self._handle_free_command(action, args, operator_id, operator_name)
+            if operation == "add":
+                return self._handle_add_command(object_type, args, operator_id, operator_name)
+            elif operation == "del":
+                return self._handle_del_command(object_type, args, operator_id, operator_name)
+            elif operation == "modify":
+                return self._handle_modify_command(object_type, args, operator_id, operator_name)
+            elif operation == "ban":
+                return self._handle_ban_command(object_type, args, operator_id, operator_name)
+            elif operation == "free":
+                return self._handle_free_command(object_type, args, operator_id, operator_name)
             else:
-                return False, f"未知命令: {command}", None
-                
+                return False, f"未知操作类型: {operation}", None
+
         except Exception as e:
             self.logger.error(f"处理管理员命令失败: {e}", exc_info=True)
             return False, f"命令执行失败: {str(e)}", None
     
-    def _handle_user_command(self, action: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-        """处理用户管理命令"""
-        if action == "-d":  # 删除用户
-            return self._delete_user(args, operator_id, operator_name)
-        elif action == "-m":  # 修改用户信息
-            return self._modify_user(args, operator_id, operator_name)
+    def _handle_add_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """处理新增命令"""
+        if object_type == "-u":  # 新增用户
+            return self._add_user_interactive(args, operator_id, operator_name)
         else:
-            return False, f"用户命令不支持操作: {action}", None
-    
-    def _handle_group_command(self, action: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-        """处理群组管理命令"""
-        if action == "-d":  # 删除群组
+            return False, f"新增操作不支持对象类型: {object_type}", None
+
+    def _handle_del_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """处理删除命令"""
+        if object_type == "-u":  # 删除用户
+            return self._delete_user(args, operator_id, operator_name)
+        elif object_type == "-g":  # 删除群组
             return self._delete_group(args, operator_id, operator_name)
-        elif action == "-m":  # 修改群组信息
+        elif object_type == "-f":  # 删除文件
+            return self._delete_file(args, operator_id, operator_name)
+        else:
+            return False, f"删除操作不支持对象类型: {object_type}", None
+
+    def _handle_modify_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """处理修改命令"""
+        if object_type == "-u":  # 修改用户信息
+            return self._modify_user(args, operator_id, operator_name)
+        elif object_type == "-g":  # 修改群组信息
             return self._modify_group(args, operator_id, operator_name)
         else:
-            return False, f"群组命令不支持操作: {action}", None
-    
-    def _handle_ban_command(self, action: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+            return False, f"修改操作不支持对象类型: {object_type}", None
+
+    def _handle_ban_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """处理禁言命令"""
-        if action == "-u":  # 禁言用户
+        if object_type == "-u":  # 禁言用户
             return self._ban_user(args, operator_id, operator_name)
-        elif action == "-g":  # 禁言群组
+        elif object_type == "-g":  # 禁言群组
             return self._ban_group(args, operator_id, operator_name)
         else:
-            return False, f"禁言命令不支持操作: {action}", None
-    
-    def _handle_free_command(self, action: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+            return False, f"禁言操作不支持对象类型: {object_type}", None
+
+    def _handle_free_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """处理解禁命令"""
-        if action == "-u":  # 解除用户禁言
+        if object_type == "-u":  # 解除用户禁言
             return self._unban_user(args, operator_id, operator_name)
-        elif action == "-g":  # 解除群组禁言
+        elif object_type == "-g":  # 解除群组禁言
             return self._unban_group(args, operator_id, operator_name)
-        elif action == "-l":  # 列出被禁言对象
+        elif object_type == "-l":  # 列出被禁言对象
             return self._list_banned_objects(operator_id, operator_name)
         else:
-            return False, f"解禁命令不支持操作: {action}", None
+            return False, f"解禁操作不支持对象类型: {object_type}", None
+
+    def _add_user_interactive(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """新增用户（需要用户名和密码参数）"""
+        if len(args) < 2:
+            return False, "用法: /add -u <用户名> <密码>", None
+
+        username = args[0]
+        password = args[1]
+
+        try:
+            # 创建用户
+            user_id = self.db.create_user_interactive(username, password)
+
+            # 记录日志
+            log_admin_operation("add_user", operator_id, operator_name, "user", user_id, username, True)
+
+            return True, f"用户 {username} (ID: {user_id}) 已创建成功", None
+
+        except Exception as e:
+            if "已存在" in str(e):
+                return False, f"用户名 {username} 已存在", None
+            log_admin_operation("add_user", operator_id, operator_name, "user", 0, username, False, str(e))
+            return False, f"创建用户失败: {str(e)}", None
+
+    def _delete_file(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """删除文件"""
+        if not args:
+            return False, "用法: /del -f <文件ID>", None
+
+        try:
+            file_id = int(args[0])
+
+            # 获取文件信息用于日志
+            file_info = self.db.get_file_by_id(file_id)
+            filename = file_info['original_filename']
+            uploader_name = file_info.get('uploader_username', '未知用户')
+            group_name = file_info.get('group_name', '未知群组')
+
+            # 执行删除
+            self.db.delete_file(file_id)
+
+            # 记录日志
+            log_admin_operation("delete_file", operator_id, operator_name, "file", file_id, filename, True)
+
+            return True, f"文件 {filename} (ID: {file_id}) 已被删除\n上传者: {uploader_name}\n所属群组: {group_name}", None
+
+        except ValueError:
+            return False, "文件ID必须是数字", None
+        except Exception as e:
+            if "不存在" in str(e):
+                return False, f"文件ID {args[0]} 不存在", None
+            log_admin_operation("delete_file", operator_id, operator_name, "file", int(args[0]) if args[0].isdigit() else 0, args[0], False, str(e))
+            return False, f"删除文件失败: {str(e)}", None
     
     def _delete_user(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """删除用户"""

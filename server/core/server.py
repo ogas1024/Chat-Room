@@ -1066,7 +1066,7 @@ class ChatRoomServer:
             if not user_info:
                 return
 
-            # 构建命令字符串
+            # 构建命令字符串（新架构）
             command_str = f"/{message.command} {message.action}"
             if message.target_id:
                 command_str += f" {message.target_id}"
@@ -1101,11 +1101,20 @@ class ChatRoomServer:
     def _broadcast_admin_operation_notification(self, operator_info: dict,
                                               command: AdminCommandRequest,
                                               message: str):
-        """广播管理员操作通知"""
+        """广播管理员操作通知（新架构）"""
         try:
             # 确定操作类型和目标类型
             operation = f"{command.command}_{command.action}"
-            target_type = "user" if command.command in ["user", "ban", "free"] and command.action in ["-u"] else "group"
+
+            # 根据新架构确定目标类型
+            if command.action == "-u":
+                target_type = "user"
+            elif command.action == "-g":
+                target_type = "group"
+            elif command.action == "-f":
+                target_type = "file"
+            else:
+                target_type = "system"
 
             # 创建通知消息
             notification = AdminOperationNotification(

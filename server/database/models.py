@@ -703,3 +703,85 @@ class DatabaseManager:
             # 记录日志
             self.logger.info("聊天组信息被更新", group_id=group_id, name=name)
             log_database_operation("update", "chat_groups", group_id=group_id, name=name)
+
+    def get_file_by_id(self, file_id: int) -> Dict[str, Any]:
+        """根据文件ID获取文件信息"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """SELECT fm.*, u.username as uploader_username, cg.name as group_name
+                   FROM files_metadata fm
+                   LEFT JOIN users u ON fm.uploader_id = u.id
+                   LEFT JOIN chat_groups cg ON fm.chat_group_id = cg.id
+                   WHERE fm.id = ?""",
+                (file_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                from shared.exceptions import FileNotFoundError
+                raise FileNotFoundError(f"文件ID {file_id} 不存在")
+            return dict(row)
+
+    def delete_file(self, file_id: int) -> Dict[str, Any]:
+        """删除文件（管理员操作）"""
+        import os
+
+        # 先获取文件信息
+        file_info = self.get_file_by_id(file_id)
+        server_filepath = file_info['server_filepath']
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 删除数据库记录
+            cursor.execute("DELETE FROM files_metadata WHERE id = ?", (file_id,))
+
+            # 如果有关联的消息，也删除消息记录
+            if file_info.get('message_id'):
+                cursor.execute("DELETE FROM messages WHERE id = ?", (file_info['message_id'],))
+
+            conn.commit()
+
+            # 删除物理文件
+            try:
+                if os.path.exists(server_filepath):
+                    os.remove(server_filepath)
+                    self.logger.info(f"物理文件已删除: {server_filepath}")
+                else:
+                    self.logger.warning(f"物理文件不存在: {server_filepath}")
+            except Exception as e:
+                self.logger.error(f"删除物理文件失败: {e}")
+                # 注意：即使物理文件删除失败，数据库记录已经删除，不回滚
+
+            # 记录日志
+            self.logger.info("文件被删除", file_id=file_id, filename=file_info['original_filename'])
+            log_database_operation("delete", "files_metadata", file_id=file_id,
+                                 filename=file_info['original_filename'])
+
+            return file_info
+
+    def create_user_interactive(self, username: str, password: str) -> int:
+        """创建用户（管理员操作，交互式）"""
+        # 检查用户名是否已存在
+        try:
+            self.get_user_by_username(username)
+            from shared.exceptions import UserAlreadyExistsError
+            raise UserAlreadyExistsError(f"用户名 {username} 已存在")
+        except UserNotFoundError:
+            pass  # 用户不存在，可以创建
+
+        # 创建用户
+        user_id = self.create_user(username, password)
+
+        # 将新用户添加到默认聊天组
+        try:
+            public_group = self.get_chat_group_by_name("public")
+            self.add_user_to_chat_group(public_group['id'], user_id)
+        except Exception as e:
+            self.logger.warning(f"无法将新用户添加到public群组: {e}")
+
+        # 记录日志
+        self.logger.info("管理员创建用户", user_id=user_id, username=username)
+        log_database_operation("create", "users", user_id=user_id, username=username)
+
+        return user_id
