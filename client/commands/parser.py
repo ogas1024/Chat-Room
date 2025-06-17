@@ -398,12 +398,12 @@ class CommandHandler:
             # 记录命令开始执行
             self.logger.info("执行命令", command=command.name, args=command.args, options=command.options)
 
-            # 对于recv_files命令，添加额外的调试信息
+            # 记录recv_files命令的详细解析信息到日志
             if command.name == "recv_files":
-                print(f"[DEBUG] recv_files命令解析结果:")
-                print(f"[DEBUG]   args: {command.args}")
-                print(f"[DEBUG]   options: {command.options}")
-                print(f"[DEBUG]   raw_input: {command.raw_input}")
+                self.logger.debug("recv_files命令解析详情",
+                                args=command.args,
+                                options=command.options,
+                                raw_input=command.raw_input)
 
             # 如果用户已登录，记录用户操作
             if self.chat_client.is_logged_in() and self.chat_client.current_user:
@@ -655,7 +655,7 @@ class CommandHandler:
         if not self.chat_client.is_logged_in():
             return False, "请先登录"
 
-        # 调试信息已在上层处理器中输出
+        # 调试信息已记录到日志系统
 
         if not command.options:
             return False, "请指定操作: -l(列出文件) -n <文件ID>(下载文件) -a(下载所有)"
@@ -766,18 +766,18 @@ class CommandHandler:
         if not self._is_admin():
             return False, "权限不足：需要管理员权限"
 
-        if not command.args:
+        # 检查选项中是否有 -u
+        if "-u" not in command.options:
             return False, "用法: /add -u <用户名> <密码>"
 
-        # 解析参数
-        if len(command.args) < 1 or command.args[0] != "-u":
+        username = command.options["-u"]
+        if username is True:  # 如果选项没有值
             return False, "用法: /add -u <用户名> <密码>"
 
-        if len(command.args) < 3:
+        if len(command.args) < 1:
             return False, "用法: /add -u <用户名> <密码>"
 
-        username = command.args[1]
-        password = command.args[2]
+        password = command.args[0]
 
         # 发送管理员命令
         success, message = self.chat_client.send_admin_command(
@@ -794,11 +794,27 @@ class CommandHandler:
         if not self._is_admin():
             return False, "权限不足：需要管理员权限"
 
-        if len(command.args) < 2:
-            return False, "用法: /del -u <用户ID> 或 /del -g <群组ID> 或 /del -f <文件ID>"
+        # 检查选项中是否有 -u, -g 或 -f
+        object_type = None
+        target = None
 
-        object_type = command.args[0]
-        target = command.args[1]
+        if "-u" in command.options:
+            object_type = "-u"
+            target = command.options["-u"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /del -u <用户ID>"
+        elif "-g" in command.options:
+            object_type = "-g"
+            target = command.options["-g"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /del -g <群组ID>"
+        elif "-f" in command.options:
+            object_type = "-f"
+            target = command.options["-f"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /del -f <文件ID>"
+        else:
+            return False, "用法: /del -u <用户ID> 或 /del -g <群组ID> 或 /del -f <文件ID>"
 
         if object_type == "-u":
             try:
@@ -851,34 +867,48 @@ class CommandHandler:
         if not self._is_admin():
             return False, "权限不足：需要管理员权限"
 
-        if len(command.args) < 4:
-            return False, "用法: /modify -u <用户ID> <字段> <新值> 或 /modify -g <群组ID> <字段> <新值>"
+        # 检查选项中是否有 -u 或 -g
+        if "-u" in command.options:
+            target_id = command.options["-u"]
+            if target_id is True:  # 如果选项没有值
+                return False, "用法: /modify -u <用户ID> <字段> <新值>"
 
-        object_type = command.args[0]
-        target_id = command.args[1]
-        field = command.args[2]
-        new_value = command.args[3]
+            if len(command.args) < 2:
+                return False, "用法: /modify -u <用户ID> <字段> <新值>"
 
-        if object_type == "-u":
+            field = command.args[0]
+            new_value = command.args[1]
+
             try:
                 user_id = int(target_id)
                 success, message = self.chat_client.send_admin_command(
-                    "modify", object_type, user_id, "", f"{field} {new_value}"
+                    "modify", "-u", user_id, "", f"{field} {new_value}"
                 )
                 return success, message
             except ValueError:
                 return False, "用户ID必须是数字"
-        elif object_type == "-g":
+
+        elif "-g" in command.options:
+            target_id = command.options["-g"]
+            if target_id is True:  # 如果选项没有值
+                return False, "用法: /modify -g <群组ID> <字段> <新值>"
+
+            if len(command.args) < 2:
+                return False, "用法: /modify -g <群组ID> <字段> <新值>"
+
+            field = command.args[0]
+            new_value = command.args[1]
+
             try:
                 group_id = int(target_id)
                 success, message = self.chat_client.send_admin_command(
-                    "modify", object_type, group_id, "", f"{field} {new_value}"
+                    "modify", "-g", group_id, "", f"{field} {new_value}"
                 )
                 return success, message
             except ValueError:
                 return False, "群组ID必须是数字"
         else:
-            return False, "修改操作支持: -u(用户) -g(群组)"
+            return False, "用法: /modify -u <用户ID> <字段> <新值> 或 /modify -g <群组ID> <字段> <新值>"
 
     def handle_admin_ban(self, command: Command) -> tuple[bool, str]:
         """处理禁言命令"""
@@ -888,11 +918,22 @@ class CommandHandler:
         if not self._is_admin():
             return False, "权限不足：需要管理员权限"
 
-        if len(command.args) < 2:
-            return False, "用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
+        # 检查选项中是否有 -u 或 -g，并获取目标
+        object_type = None
+        target = None
 
-        object_type = command.args[0]
-        target = command.args[1]
+        if "-u" in command.options:
+            object_type = "-u"
+            target = command.options["-u"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /ban -u <用户ID/用户名>"
+        elif "-g" in command.options:
+            object_type = "-g"
+            target = command.options["-g"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /ban -g <群组ID/群组名>"
+        else:
+            return False, "用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
 
         if object_type == "-u":
             confirm = input(f"确认禁言用户 {target}？(y/N): ").strip().lower()
@@ -923,29 +964,27 @@ class CommandHandler:
         if not self._is_admin():
             return False, "权限不足：需要管理员权限"
 
-        if not command.args:
-            return False, "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
-
-        object_type = command.args[0]
-
-        if object_type == "-l":
+        # 检查选项中是否有 -u, -g 或 -l
+        if "-l" in command.options:
             # 列出被禁言对象
             success, message = self.chat_client.send_admin_command(
-                "free", object_type, None, "", ""
+                "free", "-l", None, "", ""
             )
             return success, message
-        elif object_type == "-u" and len(command.args) > 1:
-            # 解除用户禁言
-            target = command.args[1]
+        elif "-u" in command.options:
+            target = command.options["-u"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /free -u <用户ID/用户名>"
             success, message = self.chat_client.send_admin_command(
-                "free", object_type, None, target, ""
+                "free", "-u", None, target, ""
             )
             return success, message
-        elif object_type == "-g" and len(command.args) > 1:
-            # 解除群组禁言
-            target = command.args[1]
+        elif "-g" in command.options:
+            target = command.options["-g"]
+            if target is True:  # 如果选项没有值
+                return False, "用法: /free -g <群组ID/群组名>"
             success, message = self.chat_client.send_admin_command(
-                "free", object_type, None, target, ""
+                "free", "-g", None, target, ""
             )
             return success, message
         else:

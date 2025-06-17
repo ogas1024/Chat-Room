@@ -131,7 +131,8 @@ class AdminManager:
             return True, f"用户 {username} (ID: {user_id}) 已创建成功", None
 
         except Exception as e:
-            if "已存在" in str(e):
+            from shared.exceptions import UserAlreadyExistsError
+            if isinstance(e, UserAlreadyExistsError) or "已存在" in str(e):
                 return False, f"用户名 {username} 已存在", None
             log_admin_operation("add_user", operator_id, operator_name, "user", 0, username, False, str(e))
             return False, f"创建用户失败: {str(e)}", None
@@ -169,7 +170,7 @@ class AdminManager:
     def _delete_user(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """删除用户"""
         if not args:
-            return False, "用法: /user -d <用户ID>", None
+            return False, "用法: /del -u <用户ID>", None
         
         try:
             user_id = int(args[0])
@@ -201,7 +202,7 @@ class AdminManager:
     def _modify_user(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """修改用户信息"""
         if len(args) < 3:
-            return False, "用法: /user -m <用户ID> <字段> <新值>", None
+            return False, "用法: /modify -u <用户ID> <字段> <新值>", None
         
         try:
             user_id = int(args[0])
@@ -238,7 +239,7 @@ class AdminManager:
     def _delete_group(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """删除群组"""
         if not args:
-            return False, "用法: /group -d <群组ID>", None
+            return False, "用法: /del -g <群组ID>", None
         
         try:
             group_id = int(args[0])
@@ -270,7 +271,7 @@ class AdminManager:
     def _modify_group(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """修改群组信息"""
         if len(args) < 3:
-            return False, "用法: /group -m <群组ID> <字段> <新值>", None
+            return False, "用法: /modify -g <群组ID> <字段> <新值>", None
         
         try:
             group_id = int(args[0])

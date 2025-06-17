@@ -120,6 +120,12 @@ class FileInfo:
 
 
 @dataclass
+class UserInfoRequest(BaseMessage):
+    """用户信息请求"""
+    message_type: str = MessageType.USER_INFO_REQUEST
+
+
+@dataclass
 class UserInfoResponse(BaseMessage):
     """用户信息响应"""
     message_type: str = MessageType.USER_INFO_RESPONSE
@@ -130,6 +136,11 @@ class UserInfoResponse(BaseMessage):
     total_users_count: int = 0
     online_users_count: int = 0
     total_chats_count: int = 0
+    # 禁言状态信息
+    is_user_banned: bool = False
+    is_current_chat_banned: bool = False
+    current_chat_group_id: Optional[int] = None
+    current_chat_group_name: str = ""
 
 
 @dataclass
@@ -431,6 +442,7 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.CHAT_MESSAGE: ChatMessage,
         MessageType.CHAT_HISTORY: ChatMessage,  # 历史消息也使用ChatMessage类
         MessageType.CHAT_HISTORY_COMPLETE: ChatHistoryComplete,  # 历史消息加载完成通知
+        MessageType.USER_INFO_REQUEST: UserInfoRequest,
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
         MessageType.LIST_USERS_REQUEST: ListUsersRequest,
         MessageType.LIST_USERS_RESPONSE: ListUsersResponse,

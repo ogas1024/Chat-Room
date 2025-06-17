@@ -54,6 +54,13 @@ class SimpleChatClient:
         # 设置Simple模式的消息处理器
         self._setup_simple_message_handlers()
 
+        # 用户状态信息
+        self.user_ban_status = {
+            'is_user_banned': False,
+            'is_current_chat_banned': False,
+            'current_chat_group_name': ''
+        }
+
     def _setup_simple_message_handlers(self):
         """设置Simple模式的消息处理器"""
         from shared.constants import MessageType
@@ -73,6 +80,16 @@ class SimpleChatClient:
             MessageType.CHAT_MESSAGE, self._handle_simple_chat_message
         )
 
+        # 用户信息响应处理器
+        self.chat_client.network_client.set_message_handler(
+            MessageType.USER_INFO_RESPONSE, self._handle_simple_user_info_response
+        )
+
+        # 错误消息处理器
+        self.chat_client.network_client.set_message_handler(
+            MessageType.ERROR_MESSAGE, self._handle_simple_error_message
+        )
+
     def _force_override_message_handlers(self):
         """强制覆盖消息处理器，确保Simple模式的处理器不被覆盖"""
         from shared.constants import MessageType
@@ -81,6 +98,8 @@ class SimpleChatClient:
         self.chat_client.network_client.message_handlers[MessageType.CHAT_HISTORY] = self._handle_simple_chat_history
         self.chat_client.network_client.message_handlers[MessageType.CHAT_HISTORY_COMPLETE] = self._handle_simple_chat_history_complete
         self.chat_client.network_client.message_handlers[MessageType.CHAT_MESSAGE] = self._handle_simple_chat_message
+        self.chat_client.network_client.message_handlers[MessageType.USER_INFO_RESPONSE] = self._handle_simple_user_info_response
+        self.chat_client.network_client.message_handlers[MessageType.ERROR_MESSAGE] = self._handle_simple_error_message
 
         # 同时覆盖ChatClient中可能设置的处理器
         if hasattr(self.chat_client, '_handle_chat_history'):
@@ -235,6 +254,57 @@ class SimpleChatClient:
         timestamp_str = datetime.now().strftime("[%H:%M:%S]")
         print(f"💬 {timestamp_str} [{message.sender_username}]: {message.content}")
 
+    def _handle_simple_user_info_response(self, message):
+        """处理Simple模式的用户信息响应"""
+        try:
+            # 更新禁言状态信息
+            self.user_ban_status['is_user_banned'] = getattr(message, 'is_user_banned', False)
+            self.user_ban_status['is_current_chat_banned'] = getattr(message, 'is_current_chat_banned', False)
+            self.user_ban_status['current_chat_group_name'] = getattr(message, 'current_chat_group_name', '')
+
+            # 如果用户被禁言，显示提示信息
+            if self.user_ban_status['is_user_banned']:
+                print("🚫 警告：您已被管理员禁言，无法发送消息")
+                print("💡 如需申诉，请联系管理员")
+
+            # 如果当前聊天组被禁言，显示提示信息
+            if self.user_ban_status['is_current_chat_banned']:
+                chat_name = self.user_ban_status['current_chat_group_name'] or '当前聊天组'
+                print(f"🚫 警告：{chat_name} 已被管理员禁言，无法发送消息")
+                print("💡 请尝试切换到其他聊天组")
+
+        except Exception as e:
+            # 静默处理错误，不影响主要功能
+            pass
+
+    def _handle_simple_error_message(self, message):
+        """处理Simple模式的错误消息"""
+        error_msg = getattr(message, 'error_message', str(message))
+
+        # 检查是否是禁言相关的错误，提供更友好的提示
+        if "禁言" in error_msg:
+            if "您已被禁言" in error_msg:
+                print("🚫 您已被管理员禁言，无法发送消息")
+                print("💡 如需申诉，请联系管理员")
+            elif "聊天组已被禁言" in error_msg or "该聊天组已被禁言" in error_msg:
+                print("🚫 当前聊天组已被管理员禁言，无法发送消息")
+                print("💡 请尝试切换到其他聊天组")
+            else:
+                print(f"🚫 {error_msg}")
+        else:
+            print(f"❌ {error_msg}")
+
+    def request_user_info(self):
+        """请求用户信息以更新禁言状态"""
+        if self.current_state == "logged_in" and self.chat_client:
+            from shared.messages import UserInfoRequest
+            try:
+                request = UserInfoRequest()
+                self.chat_client.network_client.send_message(request)
+            except Exception:
+                # 静默处理错误，不影响主要功能
+                pass
+
     def start(self):
         """启动客户端"""
         print("=" * 50)
@@ -348,6 +418,9 @@ class SimpleChatClient:
                 print(f"✅ {message}")
                 self.current_state = "logged_in"
                 print(f"欢迎, {username}! 您已进入公频聊天组")
+
+                # 登录成功后立即请求用户信息以获取禁言状态
+                self.request_user_info()
             else:
                 print(f"❌ {message}")
 
@@ -402,14 +475,26 @@ class SimpleChatClient:
             print("❌ 请先进入聊天组")
             return
 
+        # 检查本地缓存的禁言状态，提供预先提示
+        if self.user_ban_status['is_user_banned']:
+            print("🚫 您已被管理员禁言，无法发送消息")
+            print("💡 如需申诉，请联系管理员")
+            return
+
+        if self.user_ban_status['is_current_chat_banned']:
+            chat_name = self.user_ban_status['current_chat_group_name'] or '当前聊天组'
+            print(f"🚫 {chat_name} 已被管理员禁言，无法发送消息")
+            print("💡 请尝试切换到其他聊天组")
+            return
+
         # 发送消息到当前聊天组
         group_id = self.chat_client.current_chat_group['id']
         success = self.chat_client.send_chat_message(message, group_id)
 
-        if success:
-            print(f"✅ 消息已发送: {message}")
-        else:
-            print("❌ 消息发送失败")
+        if not success:
+            print("❌ 消息发送失败，请检查网络连接")
+            # 发送失败后重新请求用户信息，更新禁言状态
+            self.request_user_info()
     
     def cleanup(self):
         """清理资源"""

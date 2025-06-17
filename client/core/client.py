@@ -553,8 +553,13 @@ class ChatClient:
             # 消息不属于当前聊天组，忽略显示
             return
 
-        # 这里可以添加消息显示逻辑
-        print(f"[{message.sender_username}]: {message.content}")
+        # 消息显示逻辑由上层应用处理（TUI或Simple客户端）
+        # 这里只记录到日志
+        logger = get_logger("client.core.message")
+        logger.debug("收到聊天消息",
+                    sender=message.sender_username,
+                    chat_group_id=message.chat_group_id,
+                    content_length=len(message.content))
 
     def _handle_chat_history(self, message):
         """处理历史聊天消息"""
@@ -569,7 +574,12 @@ class ChatClient:
             return
 
         # 历史消息的默认处理（可以被上层应用覆盖）
-        print(f"[历史] [{message.sender_username}]: {message.content}")
+        # 这里只记录到日志
+        logger = get_logger("client.core.message")
+        logger.debug("收到历史消息",
+                    sender=message.sender_username,
+                    chat_group_id=message.chat_group_id,
+                    content_length=len(message.content))
 
     def _handle_chat_history_complete(self, message):
         """处理历史消息加载完成通知"""
@@ -584,15 +594,27 @@ class ChatClient:
             return
 
         # 历史消息加载完成的默认处理（可以被上层应用覆盖）
-        print(f"[系统] 历史消息加载完成，共 {message.message_count} 条消息")
+        # 这里只记录到日志
+        logger = get_logger("client.core.message")
+        logger.debug("历史消息加载完成",
+                    chat_group_id=message.chat_group_id,
+                    message_count=message.message_count)
 
     def _handle_error_message(self, message):
         """处理错误消息"""
-        print(f"错误: {message.error_message}")
-    
+        # 错误消息由上层应用处理显示，这里只记录日志
+        logger = get_logger("client.core.message")
+        logger.warning("收到错误消息",
+                      error_code=getattr(message, 'error_code', 0),
+                      error_message=message.error_message)
+
     def _handle_system_message(self, message):
         """处理系统消息"""
-        print(f"系统: {message.content}")
+        # 系统消息由上层应用处理显示，这里只记录日志
+        logger = get_logger("client.core.message")
+        logger.info("收到系统消息",
+                   content=message.content,
+                   level=getattr(message, 'level', 'info'))
     
     def is_connected(self) -> bool:
         """检查是否已连接"""
@@ -1177,18 +1199,23 @@ class ChatClient:
 
     def _handle_admin_operation_notification(self, message):
         """处理管理员操作通知"""
-        # 显示管理员操作通知
-        if hasattr(message, 'message') and message.message:
-            print(f"\n[管理员通知] {message.message}")
+        # 管理员操作通知由上层应用处理显示，这里只记录日志和处理必要的逻辑
+        logger = get_logger("client.core.admin")
 
-        # 如果当前用户被操作，可能需要特殊处理
+        if hasattr(message, 'message') and message.message:
+            logger.info("收到管理员操作通知",
+                       operation=getattr(message, 'operation', ''),
+                       message=message.message)
+
+        # 如果当前用户被操作，需要特殊处理
         if hasattr(message, 'target_id') and self.current_user:
             if message.target_id == self.current_user.get('id'):
-                if 'ban' in message.operation:
-                    print("⚠️  您已被管理员禁言")
-                elif 'unban' in message.operation:
-                    print("✅ 您的禁言已被解除")
-                elif 'delete' in message.operation:
-                    print("⚠️  您的账户已被管理员删除，连接将断开")
-                    # 可以考虑自动断开连接
+                operation = getattr(message, 'operation', '')
+                if 'ban' in operation:
+                    logger.warning("用户被管理员禁言", user_id=self.current_user.get('id'))
+                elif 'unban' in operation:
+                    logger.info("用户禁言被解除", user_id=self.current_user.get('id'))
+                elif 'delete' in operation:
+                    logger.warning("用户账户被管理员删除", user_id=self.current_user.get('id'))
+                    # 自动断开连接
                     self.disconnect()

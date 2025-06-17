@@ -448,6 +448,32 @@ class ChatRoomServer:
             # 获取详细信息
             detailed_info = self.user_manager.get_user_info(user_info['user_id'])
 
+            # 获取禁言状态信息
+            user_id = user_info['user_id']
+            is_user_banned = self.user_manager.db.is_user_banned(user_id)
+
+            # 获取当前聊天组信息和禁言状态
+            current_chat_group = self.user_manager.get_user_current_chat(user_id)
+            is_current_chat_banned = False
+            current_chat_group_name = ""
+
+            if current_chat_group:
+                try:
+                    chat_group_info = self.user_manager.db.get_chat_group_by_id(current_chat_group)
+                    is_current_chat_banned = self.user_manager.db.is_chat_group_banned(current_chat_group)
+                    current_chat_group_name = chat_group_info['name']
+                except Exception:
+                    # 如果获取聊天组信息失败，使用默认值
+                    pass
+
+            # 添加禁言状态信息到响应
+            detailed_info.update({
+                'is_user_banned': is_user_banned,
+                'is_current_chat_banned': is_current_chat_banned,
+                'current_chat_group_id': current_chat_group,
+                'current_chat_group_name': current_chat_group_name
+            })
+
             # 发送响应
             response = UserInfoResponse(**detailed_info)
             self.send_message(client_socket, response)

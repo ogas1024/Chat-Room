@@ -114,12 +114,15 @@ class EnhancedChatLog(RichLog):
 
 class StatusPanel(Static):
     """状态面板组件"""
-    
+
     connection_status = reactive("未连接")
     current_user = reactive("")
     current_chat = reactive("未进入聊天组")
     online_users = reactive([])
-    
+    # 禁言状态
+    is_user_banned = reactive(False)
+    is_current_chat_banned = reactive(False)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.theme = get_current_theme()
@@ -130,31 +133,56 @@ class StatusPanel(Static):
         table = Table.grid(padding=(0, 1))
         table.add_column(style="bold")
         table.add_column()
-        
+
         # 连接状态
         status_style = self.theme.styles["status.online"] if "已连接" in self.connection_status else self.theme.styles["status.offline"]
         table.add_row("连接:", Text(self.connection_status, style=status_style))
-        
+
         # 用户信息
         if self.current_user:
-            table.add_row("用户:", Text(self.current_user, style=self.theme.styles["chat.self"]))
-        
+            user_text = Text()
+            user_text.append(self.current_user, style=self.theme.styles["chat.self"])
+
+            # 添加用户禁言状态指示器
+            if self.is_user_banned:
+                user_text.append(" 🚫", style="red")
+                user_text.append("(禁言)", style="red")
+
+            table.add_row("用户:", user_text)
+
         # 当前聊天组
-        table.add_row("聊天组:", Text(self.current_chat, style=self.theme.styles["chat.other"]))
-        
+        chat_text = Text()
+        chat_text.append(self.current_chat, style=self.theme.styles["chat.other"])
+
+        # 添加聊天组禁言状态指示器
+        if self.is_current_chat_banned:
+            chat_text.append(" 🚫", style="red")
+            chat_text.append("(禁言)", style="red")
+
+        table.add_row("聊天组:", chat_text)
+
+        # 禁言状态说明
+        if self.is_user_banned or self.is_current_chat_banned:
+            table.add_row("", "")
+            if self.is_user_banned:
+                table.add_row("", Text("⚠️ 您已被禁言", style="red bold"))
+            if self.is_current_chat_banned:
+                table.add_row("", Text("⚠️ 当前聊天组已被禁言", style="red bold"))
+            table.add_row("", Text("无法发送消息", style="red"))
+
         # 分隔线
         table.add_row("", "")
         table.add_row("在线用户:", "")
-        
+
         # 在线用户列表
         for user in self.online_users[:8]:  # 最多显示8个用户
             status_icon = "🟢" if user.get('is_online', False) else "🔴"
             username = user.get('username', 'Unknown')
             table.add_row("", f"{status_icon} {username}")
-        
+
         if len(self.online_users) > 8:
             table.add_row("", f"... 还有 {len(self.online_users) - 8} 个用户")
-        
+
         return Panel(
             table,
             title="[bold]状态信息[/bold]",
@@ -168,6 +196,11 @@ class StatusPanel(Static):
     def update_user_info(self, username: str):
         """更新用户信息"""
         self.current_user = username
+
+    def update_ban_status(self, is_user_banned: bool = False, is_current_chat_banned: bool = False):
+        """更新禁言状态"""
+        self.is_user_banned = is_user_banned
+        self.is_current_chat_banned = is_current_chat_banned
     
     def update_chat_info(self, chat_name: str):
         """更新聊天组信息"""

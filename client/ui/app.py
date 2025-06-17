@@ -129,6 +129,9 @@ class ChatRoomApp(App):
         # 历史消息收集器（类似Simple模式）
         self.history_messages = []
         self.current_chat_group_id = None
+
+        # 状态更新定时器
+        self.status_update_timer = None
     
     def compose(self) -> ComposeResult:
         """构建UI布局"""
@@ -222,6 +225,9 @@ class ChatRoomApp(App):
             MessageType.FILE_NOTIFICATION, self.handle_file_notification
         )
         self.chat_client.network_client.set_message_handler(
+            MessageType.USER_INFO_RESPONSE, self.handle_user_info_response
+        )
+        self.chat_client.network_client.set_message_handler(
             MessageType.AI_CHAT_RESPONSE, self.handle_ai_response
         )
     
@@ -300,6 +306,12 @@ class ChatRoomApp(App):
             self.add_error_message("❌ 请先进入聊天组")
             return
 
+        # 检查禁言状态并提供友好提示
+        if hasattr(self, 'status_list') and self.status_list:
+            # 从状态面板获取禁言状态（如果有的话）
+            # 这里我们先发送消息，让服务器返回具体的错误信息
+            pass
+
         # 发送消息到当前聊天组
         group_id = self.chat_client.current_chat_group['id']
         success = self.chat_client.send_chat_message(message, group_id)
@@ -309,7 +321,7 @@ class ChatRoomApp(App):
             # 不在这里立即显示，避免重复显示
             pass
         else:
-            self.add_error_message("❌ 消息发送失败")
+            self.add_error_message("❌ 消息发送失败，请检查网络连接")
     
     def start_login_process(self):
         """开始登录流程"""
@@ -379,6 +391,12 @@ class ChatRoomApp(App):
             self.add_system_message(f"✅ {message}")
             self.add_system_message(f"欢迎, {username}! 您已进入公频聊天组")
             self.update_status_area()
+
+            # 启动状态更新定时器
+            self.start_status_update_timer()
+
+            # 立即请求一次用户信息以获取禁言状态
+            self.request_user_info()
         else:
             self.add_error_message(f"❌ {message}")
     
@@ -773,7 +791,20 @@ class ChatRoomApp(App):
 
     def handle_error_message(self, message):
         """处理错误消息"""
-        self.add_error_message(message.error_message)
+        error_msg = message.error_message
+
+        # 检查是否是禁言相关的错误，提供更友好的提示
+        if "禁言" in error_msg:
+            if "您已被禁言" in error_msg:
+                self.add_error_message("🚫 您已被管理员禁言，无法发送消息")
+                self.add_system_message("💡 如需申诉，请联系管理员")
+            elif "聊天组已被禁言" in error_msg or "该聊天组已被禁言" in error_msg:
+                self.add_error_message("🚫 当前聊天组已被管理员禁言，无法发送消息")
+                self.add_system_message("💡 请尝试切换到其他聊天组")
+            else:
+                self.add_error_message(f"🚫 {error_msg}")
+        else:
+            self.add_error_message(error_msg)
 
     def handle_user_status_update(self, message):
         """处理用户状态更新"""
@@ -795,6 +826,84 @@ class ChatRoomApp(App):
         if hasattr(message, 'message') and message.message:
             # AI响应作为系统消息显示，带特殊标识
             self.add_ai_message(message.message)
+
+    def handle_user_info_response(self, message):
+        """处理用户信息响应"""
+        try:
+            # 更新禁言状态显示
+            is_user_banned = getattr(message, 'is_user_banned', False)
+            is_current_chat_banned = getattr(message, 'is_current_chat_banned', False)
+
+            # 更新状态面板的禁言状态
+            if hasattr(self, 'status_list') and self.status_list:
+                # 这里我们需要找到状态面板组件并更新它
+                # 由于当前使用的是简单的ListView，我们需要重新构建状态显示
+                self.update_status_area_with_ban_info(is_user_banned, is_current_chat_banned)
+
+        except Exception as e:
+            # 静默处理错误，不影响主要功能
+            pass
+
+    def request_user_info(self):
+        """请求用户信息以更新状态"""
+        if self.chat_client and self.is_logged_in:
+            from shared.messages import UserInfoRequest
+            request = UserInfoRequest()
+            self.chat_client.network_client.send_message(request)
+
+    def start_status_update_timer(self):
+        """启动状态更新定时器"""
+        if self.is_logged_in:
+            # 每30秒更新一次状态
+            self.status_update_timer = self.set_timer(30.0, self.request_user_info)
+
+    def stop_status_update_timer(self):
+        """停止状态更新定时器"""
+        if self.status_update_timer:
+            self.status_update_timer.stop()
+            self.status_update_timer = None
+
+    def update_status_area_with_ban_info(self, is_user_banned: bool = False, is_current_chat_banned: bool = False):
+        """更新状态区域并显示禁言信息"""
+        if not self.status_list:
+            return
+
+        # 清空现有内容
+        self.status_list.clear()
+
+        # 添加连接状态
+        status_text = f"连接: {self.connection_status}"
+        self.status_list.append(ListItem(Label(status_text)))
+
+        # 添加用户信息（带禁言状态）
+        if self.current_user:
+            user_text = f"用户: {self.current_user}"
+            if is_user_banned:
+                user_text += " 🚫(禁言)"
+            self.status_list.append(ListItem(Label(user_text)))
+
+        # 添加当前聊天组（带禁言状态）
+        chat_text = f"聊天组: {self.current_chat}"
+        if is_current_chat_banned:
+            chat_text += " 🚫(禁言)"
+        self.status_list.append(ListItem(Label(chat_text)))
+
+        # 如果有禁言状态，添加说明
+        if is_user_banned or is_current_chat_banned:
+            self.status_list.append(ListItem(Label("─" * 20)))
+            if is_user_banned:
+                self.status_list.append(ListItem(Label("⚠️ 您已被禁言")))
+            if is_current_chat_banned:
+                self.status_list.append(ListItem(Label("⚠️ 当前聊天组已被禁言")))
+            self.status_list.append(ListItem(Label("💡 无法发送消息")))
+
+        # 添加分隔线
+        self.status_list.append(ListItem(Label("─" * 20)))
+
+        # 添加在线用户列表
+        if self.is_logged_in and self.chat_client:
+            self.status_list.append(ListItem(Label("在线用户:")))
+            # 这里可以添加在线用户列表，但为了简化，暂时省略
 
     def add_ai_message(self, content: str):
         """添加AI消息"""
