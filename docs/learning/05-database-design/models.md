@@ -641,154 +641,1000 @@ def get_chat_group_files(self, chat_group_id: int) -> List[Dict]:
         raise DatabaseError(f"获取聊天组文件列表失败: {e}")
 ```
 
-## 🔧 数据库优化技术
+## 🔧 完整CRUD操作详解
 
-### 查询优化
+### 用户管理完整CRUD
+
+#### 创建用户 (Create)
 
 ```python
-def get_user_chat_groups_optimized(self, user_id: int) -> List[Dict]:
+def create_user(self, username: str, password: str) -> int:
     """
-    优化的用户聊天组查询
-    使用子查询获取最新消息，减少数据传输
+    创建新用户 - 完整实现
+
+    Args:
+        username: 用户名
+        password: 明文密码
+
+    Returns:
+        新用户的ID
+
+    Raises:
+        DatabaseError: 用户名已存在或其他数据库错误
+    """
+    # 1. 输入验证
+    if not username or not username.strip():
+        raise DatabaseError("用户名不能为空")
+
+    if len(username) < 3 or len(username) > 20:
+        raise DatabaseError("用户名长度必须在3-20个字符之间")
+
+    if not password or len(password) < 6:
+        raise DatabaseError("密码长度不能少于6个字符")
+
+    # 2. 密码加密
+    password_hash = self.hash_password(password)
+
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 3. 检查用户名是否已存在
+            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+            if cursor.fetchone():
+                raise DatabaseError(f"用户名 '{username}' 已存在")
+
+            # 4. 插入新用户
+            cursor.execute('''
+                INSERT INTO users (username, password_hash, is_online, is_banned)
+                VALUES (?, ?, 0, 0)
+            ''', (username, password_hash))
+
+            user_id = cursor.lastrowid
+
+            # 5. 自动加入默认聊天组
+            try:
+                public_group = self.get_chat_group_by_name(DEFAULT_PUBLIC_CHAT)
+                cursor.execute('''
+                    INSERT INTO group_members (group_id, user_id)
+                    VALUES (?, ?)
+                ''', (public_group['id'], user_id))
+            except Exception as e:
+                self.logger.warning(f"新用户加入默认聊天组失败: {e}")
+
+            # 6. 提交事务
+            conn.commit()
+
+            # 7. 记录日志
+            self.logger.info("创建新用户", user_id=user_id, username=username)
+            log_database_operation("CREATE", "users", user_id=user_id, username=username)
+
+            return user_id
+
+    except sqlite3.IntegrityError as e:
+        if "UNIQUE constraint failed" in str(e):
+            raise DatabaseError(f"用户名 '{username}' 已存在")
+        else:
+            raise DatabaseError(f"数据库完整性错误: {e}")
+    except Exception as e:
+        raise DatabaseError(f"创建用户失败: {e}")
+
+@staticmethod
+def hash_password(password: str) -> str:
+    """密码哈希处理"""
+    import hashlib
+    return hashlib.sha256(password.encode()).hexdigest()
+```
+
+#### 读取用户 (Read)
+
+```python
+def get_user_by_id(self, user_id: int) -> Dict[str, Any]:
+    """
+    根据ID获取用户信息
+
+    Args:
+        user_id: 用户ID
+
+    Returns:
+        用户信息字典
+
+    Raises:
+        UserNotFoundError: 用户不存在
     """
     try:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT cg.id, cg.name, cg.is_private_chat, cg.created_at,
-                       (SELECT COUNT(*) FROM group_members gm2 
-                        WHERE gm2.group_id = cg.id) as member_count,
-                       (SELECT m.content FROM messages m 
-                        WHERE m.group_id = cg.id 
-                        ORDER BY m.timestamp DESC LIMIT 1) as latest_message,
-                       (SELECT m.timestamp FROM messages m 
-                        WHERE m.group_id = cg.id 
-                        ORDER BY m.timestamp DESC LIMIT 1) as latest_message_time
+                SELECT id, username, is_online, is_banned, created_at
+                FROM users
+                WHERE id = ?
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row['id'],
+                    'username': row['username'],
+                    'is_online': bool(row['is_online']),
+                    'is_banned': bool(row['is_banned']),
+                    'created_at': row['created_at']
+                }
+            else:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"获取用户信息失败: {e}")
+
+def get_user_by_username(self, username: str) -> Dict[str, Any]:
+    """根据用户名获取用户信息"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, username, is_online, is_banned, created_at
+                FROM users
+                WHERE username = ?
+            ''', (username,))
+
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            else:
+                raise UserNotFoundError(f"用户名 '{username}' 不存在")
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"获取用户信息失败: {e}")
+
+def get_all_users(self, include_banned: bool = False) -> List[Dict[str, Any]]:
+    """
+    获取所有用户列表
+
+    Args:
+        include_banned: 是否包含被禁用户
+
+    Returns:
+        用户信息列表
+    """
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            sql = '''
+                SELECT id, username, is_online, is_banned, created_at
+                FROM users
+            '''
+
+            if not include_banned:
+                sql += " WHERE is_banned = 0"
+
+            sql += " ORDER BY created_at DESC"
+
+            cursor.execute(sql)
+
+            users = []
+            for row in cursor.fetchall():
+                users.append({
+                    'id': row['id'],
+                    'username': row['username'],
+                    'is_online': bool(row['is_online']),
+                    'is_banned': bool(row['is_banned']),
+                    'created_at': row['created_at']
+                })
+
+            return users
+
+    except Exception as e:
+        raise DatabaseError(f"获取用户列表失败: {e}")
+```
+
+#### 更新用户 (Update)
+
+```python
+def update_user_status(self, user_id: int, is_online: bool):
+    """更新用户在线状态"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET is_online = ?
+                WHERE id = ?
+            ''', (int(is_online), user_id))
+
+            if cursor.rowcount == 0:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            conn.commit()
+
+            # 记录日志
+            status = "在线" if is_online else "离线"
+            self.logger.debug(f"用户状态更新: {user_id} -> {status}")
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"更新用户状态失败: {e}")
+
+def update_user_info(self, user_id: int, username: str = None, password: str = None):
+    """
+    更新用户信息（管理员操作）
+
+    Args:
+        user_id: 用户ID
+        username: 新用户名（可选）
+        password: 新密码（可选）
+    """
+    if not username and not password:
+        raise DatabaseError("至少需要提供一个要更新的字段")
+
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 检查用户是否存在
+            cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+            if not cursor.fetchone():
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            # 更新用户名
+            if username:
+                # 检查新用户名是否已被使用
+                cursor.execute("SELECT id FROM users WHERE username = ? AND id != ?",
+                             (username, user_id))
+                if cursor.fetchone():
+                    raise DatabaseError(f"用户名 '{username}' 已被使用")
+
+                cursor.execute("UPDATE users SET username = ? WHERE id = ?",
+                             (username, user_id))
+
+            # 更新密码
+            if password:
+                password_hash = self.hash_password(password)
+                cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?",
+                             (password_hash, user_id))
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户信息更新", user_id=user_id, username=username)
+            log_database_operation("UPDATE", "users", user_id=user_id, username=username)
+
+    except Exception as e:
+        if isinstance(e, (UserNotFoundError, DatabaseError)):
+            raise
+        raise DatabaseError(f"更新用户信息失败: {e}")
+
+def ban_user(self, user_id: int):
+    """禁用用户"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET is_banned = 1 WHERE id = ?", (user_id,))
+
+            if cursor.rowcount == 0:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户被禁用", user_id=user_id)
+            log_database_operation("BAN", "users", user_id=user_id)
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"禁用用户失败: {e}")
+
+def unban_user(self, user_id: int):
+    """解禁用户"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET is_banned = 0 WHERE id = ?", (user_id,))
+
+            if cursor.rowcount == 0:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("用户解除禁用", user_id=user_id)
+            log_database_operation("UNBAN", "users", user_id=user_id)
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"解禁用户失败: {e}")
+```
+
+#### 删除用户 (Delete)
+
+```python
+def delete_user(self, user_id: int):
+    """
+    删除用户（管理员操作）
+    注意：这是物理删除，会同时删除用户的所有相关数据
+
+    Args:
+        user_id: 用户ID
+    """
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 检查用户是否存在
+            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+            user_row = cursor.fetchone()
+            if not user_row:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            username = user_row['username']
+
+            # 开始事务删除（SQLite自动事务）
+
+            # 1. 删除用户的聊天组成员关系
+            cursor.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
+
+            # 2. 删除用户发送的消息（可选：保留消息但标记发送者为已删除）
+            cursor.execute("DELETE FROM messages WHERE sender_id = ?", (user_id,))
+
+            # 3. 删除用户上传的文件元数据
+            cursor.execute("SELECT server_filepath FROM files_metadata WHERE uploader_id = ?",
+                         (user_id,))
+            file_paths = [row['server_filepath'] for row in cursor.fetchall()]
+
+            cursor.execute("DELETE FROM files_metadata WHERE uploader_id = ?", (user_id,))
+
+            # 4. 删除用户记录
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+            # 提交事务
+            conn.commit()
+
+            # 5. 删除物理文件
+            import os
+            for file_path in file_paths:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as e:
+                    self.logger.warning(f"删除文件失败: {file_path}, 错误: {e}")
+
+            # 记录日志
+            self.logger.info("用户被删除", user_id=user_id, username=username)
+            log_database_operation("DELETE", "users", user_id=user_id, username=username)
+
+    except Exception as e:
+        if isinstance(e, UserNotFoundError):
+            raise
+        raise DatabaseError(f"删除用户失败: {e}")
+```
+
+### 聊天组管理完整CRUD
+
+#### 创建聊天组 (Create)
+
+```python
+def create_chat_group(self, name: str, is_private_chat: bool = False) -> int:
+    """
+    创建聊天组
+
+    Args:
+        name: 聊天组名称
+        is_private_chat: 是否为私聊
+
+    Returns:
+        新聊天组的ID
+    """
+    # 输入验证
+    if not name or not name.strip():
+        raise DatabaseError("聊天组名称不能为空")
+
+    if len(name) > 50:
+        raise DatabaseError("聊天组名称不能超过50个字符")
+
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 检查名称是否已存在
+            cursor.execute("SELECT id FROM chat_groups WHERE name = ?", (name,))
+            if cursor.fetchone():
+                raise DatabaseError(f"聊天组名称 '{name}' 已存在")
+
+            # 创建聊天组
+            cursor.execute('''
+                INSERT INTO chat_groups (name, is_private_chat, is_banned)
+                VALUES (?, ?, 0)
+            ''', (name, int(is_private_chat)))
+
+            group_id = cursor.lastrowid
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("创建聊天组", group_id=group_id, name=name)
+            log_database_operation("CREATE", "chat_groups", group_id=group_id, name=name)
+
+            return group_id
+
+    except Exception as e:
+        if "已存在" in str(e):
+            raise
+        raise DatabaseError(f"创建聊天组失败: {e}")
+```
+
+#### 读取聊天组 (Read)
+
+```python
+def get_chat_group_by_id(self, group_id: int) -> Dict[str, Any]:
+    """根据ID获取聊天组信息"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, name, is_private_chat, is_banned, created_at
+                FROM chat_groups
+                WHERE id = ?
+            ''', (group_id,))
+
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row['id'],
+                    'name': row['name'],
+                    'is_private_chat': bool(row['is_private_chat']),
+                    'is_banned': bool(row['is_banned']),
+                    'created_at': row['created_at']
+                }
+            else:
+                raise ChatGroupNotFoundError(f"聊天组ID {group_id} 不存在")
+
+    except Exception as e:
+        if isinstance(e, ChatGroupNotFoundError):
+            raise
+        raise DatabaseError(f"获取聊天组信息失败: {e}")
+
+def get_user_chat_groups(self, user_id: int) -> List[Dict[str, Any]]:
+    """获取用户参与的聊天组列表"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT cg.id, cg.name, cg.is_private_chat, cg.is_banned, cg.created_at,
+                       gm.joined_at,
+                       (SELECT COUNT(*) FROM group_members gm2 WHERE gm2.group_id = cg.id) as member_count
                 FROM chat_groups cg
                 JOIN group_members gm ON cg.id = gm.group_id
                 WHERE gm.user_id = ?
-                ORDER BY latest_message_time DESC NULLS LAST
+                ORDER BY gm.joined_at DESC
             ''', (user_id,))
-            
-            # 处理查询结果...
-            
-    except Exception as e:
-        raise DatabaseError(f"获取用户聊天组失败: {e}")
 
-def cleanup_old_messages(self, days_to_keep: int = 30):
-    """
-    清理旧消息（数据库维护）
-    
-    Args:
-        days_to_keep: 保留天数
-    """
-    try:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                DELETE FROM messages 
-                WHERE timestamp < datetime('now', '-{} days')
-            '''.format(days_to_keep))
-            
-            deleted_count = cursor.rowcount
-            conn.commit()
-            
-            self.logger.info(f"清理了 {deleted_count} 条旧消息")
-            
+            groups = []
+            for row in cursor.fetchall():
+                groups.append({
+                    'id': row['id'],
+                    'name': row['name'],
+                    'is_private_chat': bool(row['is_private_chat']),
+                    'is_banned': bool(row['is_banned']),
+                    'created_at': row['created_at'],
+                    'joined_at': row['joined_at'],
+                    'member_count': row['member_count']
+                })
+
+            return groups
+
     except Exception as e:
-        raise DatabaseError(f"清理旧消息失败: {e}")
+        raise DatabaseError(f"获取用户聊天组列表失败: {e}")
 ```
 
-### 事务处理
+#### 更新聊天组 (Update)
 
 ```python
-def transfer_user_to_group(self, user_id: int, from_group_id: int, to_group_id: int):
-    """
-    事务示例：将用户从一个聊天组转移到另一个聊天组
-    """
+def update_chat_group_info(self, group_id: int, name: str = None):
+    """更新聊天组信息"""
+    if not name:
+        raise DatabaseError("至少需要提供一个要更新的字段")
+
     try:
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
-            # 开始事务（SQLite默认自动开始）
-            
-            # 从原聊天组移除
-            cursor.execute(
-                "DELETE FROM group_members WHERE group_id = ? AND user_id = ?",
-                (from_group_id, user_id)
-            )
-            
-            # 添加到新聊天组
-            cursor.execute(
-                "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)",
-                (to_group_id, user_id)
-            )
-            
-            # 记录转移消息
+
+            # 检查聊天组是否存在
+            cursor.execute("SELECT name FROM chat_groups WHERE id = ?", (group_id,))
+            if not cursor.fetchone():
+                raise ChatGroupNotFoundError(f"聊天组ID {group_id} 不存在")
+
+            # 检查新名称是否已被使用
+            if name:
+                cursor.execute("SELECT id FROM chat_groups WHERE name = ? AND id != ?",
+                             (name, group_id))
+                if cursor.fetchone():
+                    raise DatabaseError(f"聊天组名称 '{name}' 已被使用")
+
+                cursor.execute("UPDATE chat_groups SET name = ? WHERE id = ?",
+                             (name, group_id))
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组信息更新", group_id=group_id, name=name)
+            log_database_operation("UPDATE", "chat_groups", group_id=group_id, name=name)
+
+    except Exception as e:
+        if isinstance(e, (ChatGroupNotFoundError, DatabaseError)):
+            raise
+        raise DatabaseError(f"更新聊天组信息失败: {e}")
+
+def ban_chat_group(self, group_id: int):
+    """禁言聊天组"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE chat_groups SET is_banned = 1 WHERE id = ?", (group_id,))
+
+            if cursor.rowcount == 0:
+                raise ChatGroupNotFoundError(f"聊天组ID {group_id} 不存在")
+
+            conn.commit()
+
+            # 记录日志
+            self.logger.info("聊天组被禁言", group_id=group_id)
+            log_database_operation("BAN", "chat_groups", group_id=group_id)
+
+    except Exception as e:
+        if isinstance(e, ChatGroupNotFoundError):
+            raise
+        raise DatabaseError(f"禁言聊天组失败: {e}")
+```
+
+#### 删除聊天组 (Delete)
+
+```python
+def delete_chat_group(self, group_id: int):
+    """删除聊天组（管理员操作）"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 检查聊天组是否存在
+            cursor.execute("SELECT name FROM chat_groups WHERE id = ?", (group_id,))
+            group_row = cursor.fetchone()
+            if not group_row:
+                raise ChatGroupNotFoundError(f"聊天组ID {group_id} 不存在")
+
+            group_name = group_row['name']
+
+            # 获取要删除的文件路径
+            cursor.execute("SELECT server_filepath FROM files_metadata WHERE chat_group_id = ?",
+                         (group_id,))
+            file_paths = [row['server_filepath'] for row in cursor.fetchall()]
+
+            # 开始事务删除
+            # 1. 删除聊天组成员关系
+            cursor.execute("DELETE FROM group_members WHERE group_id = ?", (group_id,))
+
+            # 2. 删除聊天组消息
+            cursor.execute("DELETE FROM messages WHERE group_id = ?", (group_id,))
+
+            # 3. 删除文件元数据
+            cursor.execute("DELETE FROM files_metadata WHERE chat_group_id = ?", (group_id,))
+
+            # 4. 删除聊天组记录
+            cursor.execute("DELETE FROM chat_groups WHERE id = ?", (group_id,))
+
+            conn.commit()
+
+            # 5. 删除物理文件
+            import os
+            for file_path in file_paths:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as e:
+                    self.logger.warning(f"删除文件失败: {file_path}, 错误: {e}")
+
+            # 记录日志
+            self.logger.info("聊天组被删除", group_id=group_id, name=group_name)
+            log_database_operation("DELETE", "chat_groups", group_id=group_id, name=group_name)
+
+    except Exception as e:
+        if isinstance(e, ChatGroupNotFoundError):
+            raise
+        raise DatabaseError(f"删除聊天组失败: {e}")
+```
+
+### 消息管理完整CRUD
+
+#### 创建消息 (Create)
+
+```python
+def save_message(self, group_id: int, sender_id: int, content: str,
+                message_type: str = 'text') -> int:
+    """
+    保存消息到数据库
+
+    Args:
+        group_id: 聊天组ID
+        sender_id: 发送者ID
+        content: 消息内容
+        message_type: 消息类型
+
+    Returns:
+        消息ID
+    """
+    # 输入验证
+    if not content or not content.strip():
+        raise DatabaseError("消息内容不能为空")
+
+    if len(content) > 2000:
+        raise DatabaseError("消息内容不能超过2000个字符")
+
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 验证发送者和聊天组是否存在
+            cursor.execute("SELECT id FROM users WHERE id = ?", (sender_id,))
+            if not cursor.fetchone():
+                raise UserNotFoundError(f"发送者ID {sender_id} 不存在")
+
+            cursor.execute("SELECT id FROM chat_groups WHERE id = ?", (group_id,))
+            if not cursor.fetchone():
+                raise ChatGroupNotFoundError(f"聊天组ID {group_id} 不存在")
+
+            # 保存消息
             cursor.execute('''
                 INSERT INTO messages (group_id, sender_id, content, message_type)
                 VALUES (?, ?, ?, ?)
-            ''', (to_group_id, user_id, "用户加入了聊天组", "system"))
-            
-            # 提交事务
+            ''', (group_id, sender_id, content, message_type))
+
+            message_id = cursor.lastrowid
             conn.commit()
-            
+
+            # 记录日志
+            self.logger.debug("保存消息", message_id=message_id,
+                            group_id=group_id, sender_id=sender_id)
+
+            return message_id
+
+    except Exception as e:
+        if isinstance(e, (UserNotFoundError, ChatGroupNotFoundError)):
+            raise
+        raise DatabaseError(f"保存消息失败: {e}")
+```
+
+#### 读取消息 (Read)
+
+```python
+def get_chat_history(self, group_id: int, limit: int = 50,
+                    before_message_id: int = None) -> List[Dict[str, Any]]:
+    """
+    获取聊天历史记录（支持分页）
+
+    Args:
+        group_id: 聊天组ID
+        limit: 消息数量限制
+        before_message_id: 获取此消息ID之前的消息（分页）
+
+    Returns:
+        消息列表
+    """
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 构建查询SQL
+            sql = '''
+                SELECT m.id, m.content, m.message_type, m.timestamp,
+                       u.id as sender_id, u.username as sender_username
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.group_id = ?
+            '''
+
+            params = [group_id]
+
+            # 添加分页条件
+            if before_message_id:
+                sql += " AND m.id < ?"
+                params.append(before_message_id)
+
+            sql += " ORDER BY m.timestamp DESC LIMIT ?"
+            params.append(limit)
+
+            cursor.execute(sql, params)
+
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    'id': row['id'],
+                    'content': row['content'],
+                    'message_type': row['message_type'],
+                    'timestamp': row['timestamp'],
+                    'sender_id': row['sender_id'],
+                    'sender_username': row['sender_username'],
+                    'group_id': group_id
+                })
+
+            # 反转列表，使最新消息在最后
+            return list(reversed(messages))
+
+    except Exception as e:
+        raise DatabaseError(f"获取聊天历史失败: {e}")
+
+def get_message_by_id(self, message_id: int) -> Dict[str, Any]:
+    """根据ID获取单条消息"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT m.id, m.content, m.message_type, m.timestamp, m.group_id,
+                       u.id as sender_id, u.username as sender_username,
+                       cg.name as group_name
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                JOIN chat_groups cg ON m.group_id = cg.id
+                WHERE m.id = ?
+            ''', (message_id,))
+
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            else:
+                raise DatabaseError(f"消息ID {message_id} 不存在")
+
+    except Exception as e:
+        if "不存在" in str(e):
+            raise
+        raise DatabaseError(f"获取消息失败: {e}")
+```
+
+## 🔧 高级数据库技术
+
+### 事务处理最佳实践
+
+```python
+def transfer_user_between_groups(self, user_id: int, from_group_id: int, to_group_id: int):
+    """
+    事务示例：将用户从一个聊天组转移到另一个聊天组
+    展示完整的事务处理和错误恢复
+    """
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 开始事务（SQLite默认自动开始）
+
+            # 1. 验证所有相关实体存在
+            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+            user_row = cursor.fetchone()
+            if not user_row:
+                raise UserNotFoundError(f"用户ID {user_id} 不存在")
+
+            cursor.execute("SELECT name FROM chat_groups WHERE id = ?", (from_group_id,))
+            if not cursor.fetchone():
+                raise ChatGroupNotFoundError(f"源聊天组ID {from_group_id} 不存在")
+
+            cursor.execute("SELECT name FROM chat_groups WHERE id = ?", (to_group_id,))
+            if not cursor.fetchone():
+                raise ChatGroupNotFoundError(f"目标聊天组ID {to_group_id} 不存在")
+
+            # 2. 检查用户是否在源聊天组中
+            cursor.execute('''
+                SELECT 1 FROM group_members
+                WHERE group_id = ? AND user_id = ?
+            ''', (from_group_id, user_id))
+            if not cursor.fetchone():
+                raise DatabaseError("用户不在源聊天组中")
+
+            # 3. 从源聊天组移除用户
+            cursor.execute('''
+                DELETE FROM group_members
+                WHERE group_id = ? AND user_id = ?
+            ''', (from_group_id, user_id))
+
+            # 4. 添加用户到目标聊天组（如果不存在）
+            cursor.execute('''
+                INSERT OR IGNORE INTO group_members (group_id, user_id)
+                VALUES (?, ?)
+            ''', (to_group_id, user_id))
+
+            # 5. 记录系统消息
+            cursor.execute('''
+                INSERT INTO messages (group_id, sender_id, content, message_type)
+                VALUES (?, ?, ?, ?)
+            ''', (to_group_id, user_id, f"用户 {user_row['username']} 加入了聊天组", "system"))
+
+            # 6. 提交事务
+            conn.commit()
+
+            # 7. 记录操作日志
+            self.logger.info("用户转移聊天组",
+                           user_id=user_id,
+                           from_group=from_group_id,
+                           to_group=to_group_id)
             log_database_operation("TRANSFER", "group_members",
                                  user_id=user_id,
                                  from_group=from_group_id,
                                  to_group=to_group_id)
-            
+
     except Exception as e:
         # 事务会自动回滚
+        self.logger.error(f"用户转移失败: {e}")
+        if isinstance(e, (UserNotFoundError, ChatGroupNotFoundError, DatabaseError)):
+            raise
         raise DatabaseError(f"用户转移失败: {e}")
+
+def batch_create_users(self, users_data: List[Dict[str, str]]) -> List[int]:
+    """
+    批量创建用户（事务处理）
+
+    Args:
+        users_data: 用户数据列表，每个元素包含username和password
+
+    Returns:
+        创建的用户ID列表
+    """
+    if not users_data:
+        return []
+
+    user_ids = []
+
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 开始批量操作
+            for user_data in users_data:
+                username = user_data.get('username')
+                password = user_data.get('password')
+
+                if not username or not password:
+                    raise DatabaseError(f"用户数据不完整: {user_data}")
+
+                # 检查用户名是否已存在
+                cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+                if cursor.fetchone():
+                    raise DatabaseError(f"用户名 '{username}' 已存在")
+
+                # 创建用户
+                password_hash = self.hash_password(password)
+                cursor.execute('''
+                    INSERT INTO users (username, password_hash, is_online, is_banned)
+                    VALUES (?, ?, 0, 0)
+                ''', (username, password_hash))
+
+                user_ids.append(cursor.lastrowid)
+
+            # 批量加入默认聊天组
+            try:
+                public_group = self.get_chat_group_by_name(DEFAULT_PUBLIC_CHAT)
+                for user_id in user_ids:
+                    cursor.execute('''
+                        INSERT INTO group_members (group_id, user_id)
+                        VALUES (?, ?)
+                    ''', (public_group['id'], user_id))
+            except Exception as e:
+                self.logger.warning(f"批量加入默认聊天组失败: {e}")
+
+            # 提交所有操作
+            conn.commit()
+
+            # 记录日志
+            self.logger.info(f"批量创建用户成功", count=len(user_ids))
+            log_database_operation("BATCH_CREATE", "users", count=len(user_ids))
+
+            return user_ids
+
+    except Exception as e:
+        # 事务自动回滚，所有操作都会被撤销
+        self.logger.error(f"批量创建用户失败: {e}")
+        if isinstance(e, DatabaseError):
+            raise
+        raise DatabaseError(f"批量创建用户失败: {e}")
+```
+
+### 数据库性能优化
+
+```python
+def optimize_database(self):
+    """数据库性能优化操作"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 1. 分析表统计信息
+            cursor.execute("ANALYZE")
+
+            # 2. 重建索引
+            cursor.execute("REINDEX")
+
+            # 3. 清理数据库碎片
+            cursor.execute("VACUUM")
+
+            conn.commit()
+
+            self.logger.info("数据库优化完成")
+
+    except Exception as e:
+        raise DatabaseError(f"数据库优化失败: {e}")
+
+def get_database_statistics(self) -> Dict[str, Any]:
+    """获取数据库统计信息"""
+    try:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            stats = {}
+
+            # 获取各表的记录数
+            tables = ['users', 'chat_groups', 'group_members', 'messages', 'files_metadata']
+            for table in tables:
+                cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                stats[f"{table}_count"] = cursor.fetchone()['count']
+
+            # 获取数据库文件大小
+            cursor.execute("PRAGMA page_count")
+            page_count = cursor.fetchone()[0]
+            cursor.execute("PRAGMA page_size")
+            page_size = cursor.fetchone()[0]
+            stats['database_size_bytes'] = page_count * page_size
+
+            # 获取索引信息
+            cursor.execute("PRAGMA index_list('users')")
+            stats['user_indexes'] = [dict(row) for row in cursor.fetchall()]
+
+            return stats
+
+    except Exception as e:
+        raise DatabaseError(f"获取数据库统计失败: {e}")
 ```
 
 ## 💡 学习要点
 
 ### 数据库设计原则
 
-1. **范式化设计**：减少数据冗余，提高一致性
-2. **实体关系**：正确建模实体间的关系
-3. **约束完整性**：使用主键、外键、唯一约束
-4. **索引优化**：为常用查询创建合适的索引
+1. **CRUD完整性**：每个实体都要有完整的增删改查操作
+2. **事务一致性**：相关操作要在同一事务中完成
+3. **数据验证**：在数据库层和应用层都要进行验证
+4. **错误处理**：详细的错误分类和处理机制
+5. **日志记录**：重要操作都要有日志记录
 
-### SQLite特性
+### SQLite高级特性
 
-1. **ACID事务**：原子性、一致性、隔离性、持久性
-2. **类型亲和性**：灵活的数据类型系统
-3. **全文搜索**：FTS扩展支持全文搜索
-4. **JSON支持**：JSON1扩展支持JSON数据
+1. **事务控制**：BEGIN、COMMIT、ROLLBACK的正确使用
+2. **约束处理**：UNIQUE、FOREIGN KEY、CHECK约束
+3. **索引优化**：复合索引、部分索引的使用
+4. **性能调优**：ANALYZE、VACUUM、REINDEX操作
 
-### 性能优化
+### 最佳实践
 
-1. **查询优化**：使用EXPLAIN QUERY PLAN分析查询
-2. **索引策略**：为WHERE、ORDER BY、JOIN创建索引
-3. **批量操作**：使用事务批量插入数据
-4. **连接池**：复用数据库连接
-
-### 安全考虑
-
-1. **SQL注入防护**：使用参数化查询
-2. **密码安全**：哈希存储密码
-3. **权限控制**：基于用户角色的访问控制
-4. **数据备份**：定期备份重要数据
+1. **参数化查询**：防止SQL注入攻击
+2. **连接管理**：使用上下文管理器管理连接
+3. **批量操作**：减少数据库连接次数
+4. **错误恢复**：完善的异常处理和事务回滚
 
 ## 🤔 思考题
 
 1. **如何设计支持消息编辑和删除？**
-   - 软删除标记
-   - 版本历史记录
-   - 权限验证
+   - 软删除标记（is_deleted字段）
+   - 版本历史记录（message_history表）
+   - 权限验证（只能编辑自己的消息）
 
 2. **如何优化大量历史消息的查询？**
-   - 分表策略
-   - 归档机制
-   - 缓存层
+   - 分表策略（按时间分表）
+   - 归档机制（旧消息移到归档表）
+   - 缓存层（Redis缓存热点数据）
 
 3. **如何实现数据库的高可用？**
-   - 主从复制
-   - 读写分离
-   - 故障转移
+   - 主从复制（SQLite不直接支持，需要应用层实现）
+   - 读写分离（读操作分散到多个副本）
+   - 故障转移（自动切换到备用数据库）
 
 ---
 

@@ -213,6 +213,103 @@ client/
 - **组件化**：UI组件可以独立开发和测试
 - **可扩展**：新命令和新主题可以轻松添加
 
+## 🗄️ 数据库设计
+
+### 数据表结构
+
+```mermaid
+erDiagram
+    users {
+        int id PK
+        string username UK
+        string password_hash
+        boolean is_online
+        boolean is_banned
+        timestamp created_at
+    }
+
+    chat_groups {
+        int id PK
+        string name UK
+        boolean is_private_chat
+        boolean is_banned
+        timestamp created_at
+    }
+
+    group_members {
+        int group_id FK
+        int user_id FK
+        timestamp joined_at
+    }
+
+    messages {
+        int id PK
+        int group_id FK
+        int sender_id FK
+        string content
+        string message_type
+        timestamp timestamp
+    }
+
+    files_metadata {
+        int id PK
+        string original_filename
+        string server_filepath
+        int file_size
+        int uploader_id FK
+        int chat_group_id FK
+        int message_id FK
+        timestamp upload_timestamp
+    }
+
+    users ||--o{ group_members : "参与"
+    chat_groups ||--o{ group_members : "包含"
+    users ||--o{ messages : "发送"
+    chat_groups ||--o{ messages : "属于"
+    users ||--o{ files_metadata : "上传"
+    chat_groups ||--o{ files_metadata : "存储在"
+    messages ||--o{ files_metadata : "关联"
+```
+
+**设计特点**：
+- **用户表**：存储用户基本信息、在线状态和禁用状态
+- **聊天组表**：支持群聊和私聊，包含禁言功能
+- **成员关系表**：多对多关系，支持用户加入多个聊天组
+- **消息表**：存储所有类型的消息（文本、文件、系统消息）
+- **文件元数据表**：管理文件上传和下载，关联到具体消息
+
+**新增功能**：
+- **管理员系统**：用户和聊天组的禁用/解禁功能
+- **文件管理**：文件与消息的关联，支持文件删除
+- **AI集成**：特殊AI用户(id=-1)和管理员用户(id=0)
+
+### 数据库操作层次
+
+```mermaid
+graph TD
+    A[应用层] --> B[业务逻辑层]
+    B --> C[数据访问层]
+    C --> D[数据库层]
+
+    B --> B1[UserManager<br/>用户管理]
+    B --> B2[ChatManager<br/>聊天管理]
+    B --> B3[AdminManager<br/>管理员功能]
+
+    C --> C1[DatabaseManager<br/>数据库管理器]
+    C --> C2[ConnectionPool<br/>连接池]
+    C --> C3[Transaction<br/>事务管理]
+
+    D --> D1[SQLite数据库]
+    D --> D2[文件存储]
+    D --> D3[日志文件]
+```
+
+**分层优势**：
+- **业务逻辑隔离**：数据库操作与业务逻辑分离
+- **事务管理**：统一的事务处理和错误恢复
+- **连接复用**：数据库连接池提高性能
+- **类型安全**：完整的CRUD操作和数据验证
+
 ## 🔄 数据流分析
 
 ### 消息发送流程
