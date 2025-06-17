@@ -1213,7 +1213,7 @@ class ChatClient:
                 operation = getattr(message, 'operation', '')
                 if 'ban' in operation:
                     logger.warning("用户被管理员禁言", user_id=self.current_user.get('id'))
-                elif 'unban' in operation:
+                elif 'free' in operation:
                     logger.info("用户禁言被解除", user_id=self.current_user.get('id'))
                 elif 'delete' in operation:
                     logger.warning("用户账户被管理员删除", user_id=self.current_user.get('id'))

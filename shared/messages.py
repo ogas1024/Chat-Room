@@ -421,7 +421,7 @@ class AdminCommandResponse(BaseMessage):
 class AdminOperationNotification(BaseMessage):
     """管理员操作通知"""
     message_type: str = MessageType.ADMIN_OPERATION_NOTIFICATION
-    operation: str = ""  # 操作类型：ban_user, unban_user, delete_user, etc.
+    operation: str = ""  # 操作类型：ban_user, free_user, delete_user, etc.
     operator_id: int = 0  # 操作者ID
     operator_name: str = ""  # 操作者用户名
     target_type: str = ""  # 目标类型：user, group

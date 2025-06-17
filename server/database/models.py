@@ -543,7 +543,7 @@ class DatabaseManager:
             self.logger.info("用户被禁言", user_id=user_id)
             log_database_operation("ban", "users", user_id=user_id)
 
-    def unban_user(self, user_id: int):
+    def free_user(self, user_id: int):
         """解除用户禁言"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -555,7 +555,7 @@ class DatabaseManager:
 
             # 记录日志
             self.logger.info("用户解除禁言", user_id=user_id)
-            log_database_operation("unban", "users", user_id=user_id)
+            log_database_operation("free", "users", user_id=user_id)
 
     def is_user_banned(self, user_id: int) -> bool:
         """检查用户是否被禁言"""
@@ -582,7 +582,7 @@ class DatabaseManager:
             self.logger.info("聊天组被禁言", group_id=group_id)
             log_database_operation("ban", "chat_groups", group_id=group_id)
 
-    def unban_chat_group(self, group_id: int):
+    def free_chat_group(self, group_id: int):
         """解除聊天组禁言"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -594,7 +594,7 @@ class DatabaseManager:
 
             # 记录日志
             self.logger.info("聊天组解除禁言", group_id=group_id)
-            log_database_operation("unban", "chat_groups", group_id=group_id)
+            log_database_operation("free", "chat_groups", group_id=group_id)
 
     def is_chat_group_banned(self, group_id: int) -> bool:
         """检查聊天组是否被禁言"""

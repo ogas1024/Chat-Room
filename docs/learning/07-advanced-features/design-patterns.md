@@ -568,7 +568,7 @@ class BanUserCommand(Command):
         """撤销禁用"""
         try:
             if not self.was_banned:
-                self.user_manager.unban_user(self.user_id)
+                self.user_manager.free_user(self.user_id)
                 logger.info(f"用户禁用被撤销: {self.user_id}")
                 return True
             return False

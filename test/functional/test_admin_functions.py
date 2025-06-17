@@ -208,7 +208,7 @@ class AdminFunctionTest:
             self.test_results.append(f"❌ 被禁言用户发送消息测试异常: {e}")
             return False
     
-    def test_admin_unban_user(self):
+    def test_admin_free_user(self):
         """测试管理员解除用户禁言"""
         print("\n📝 测试管理员解除用户禁言...")
         
@@ -288,7 +288,7 @@ class AdminFunctionTest:
                 self.test_admin_delete_file,
                 self.test_admin_ban_user,
                 self.test_banned_user_send_message,
-                self.test_admin_unban_user,
+                self.test_admin_free_user,
                 self.test_list_banned_objects,
             ]
             

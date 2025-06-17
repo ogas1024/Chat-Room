@@ -105,9 +105,9 @@ class AdminManager:
     def _handle_free_command(self, object_type: str, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """处理解禁命令"""
         if object_type == "-u":  # 解除用户禁言
-            return self._unban_user(args, operator_id, operator_name)
+            return self._free_user(args, operator_id, operator_name)
         elif object_type == "-g":  # 解除群组禁言
-            return self._unban_group(args, operator_id, operator_name)
+            return self._free_group(args, operator_id, operator_name)
         elif object_type == "-l":  # 列出被禁言对象
             return self._list_banned_objects(operator_id, operator_name)
         else:
@@ -382,7 +382,7 @@ class AdminManager:
             log_admin_operation("ban_group", operator_id, operator_name, "group", 0, target, False, str(e))
             return False, f"禁言群组失败: {str(e)}", None
 
-    def _unban_user(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    def _free_user(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """解除用户禁言"""
         if not args:
             return False, "用法: /free -u <用户ID或用户名>", None
@@ -405,20 +405,20 @@ class AdminManager:
                 return False, f"用户 {username} 未被禁言", None
 
             # 执行解禁
-            self.db.unban_user(user_id)
+            self.db.free_user(user_id)
 
             # 记录日志
-            log_admin_operation("unban_user", operator_id, operator_name, "user", user_id, username, True)
+            log_admin_operation("free_user", operator_id, operator_name, "user", user_id, username, True)
 
             return True, f"用户 {username} (ID: {user_id}) 已解除禁言", None
 
         except (UserNotFoundError, ValueError):
             return False, f"用户 {target} 不存在", None
         except Exception as e:
-            log_admin_operation("unban_user", operator_id, operator_name, "user", 0, target, False, str(e))
+            log_admin_operation("free_user", operator_id, operator_name, "user", 0, target, False, str(e))
             return False, f"解除用户禁言失败: {str(e)}", None
 
-    def _unban_group(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    def _free_group(self, args: List[str], operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """解除群组禁言"""
         if not args:
             return False, "用法: /free -g <群组ID或群组名>", None
@@ -441,17 +441,17 @@ class AdminManager:
                 return False, f"群组 {group_name} 未被禁言", None
 
             # 执行解禁
-            self.db.unban_chat_group(group_id)
+            self.db.free_chat_group(group_id)
 
             # 记录日志
-            log_admin_operation("unban_group", operator_id, operator_name, "group", group_id, group_name, True)
+            log_admin_operation("free_group", operator_id, operator_name, "group", group_id, group_name, True)
 
             return True, f"群组 {group_name} (ID: {group_id}) 已解除禁言", None
 
         except (ChatGroupNotFoundError, ValueError):
             return False, f"群组 {target} 不存在", None
         except Exception as e:
-            log_admin_operation("unban_group", operator_id, operator_name, "group", 0, target, False, str(e))
+            log_admin_operation("free_group", operator_id, operator_name, "group", 0, target, False, str(e))
             return False, f"解除群组禁言失败: {str(e)}", None
 
     def _list_banned_objects(self, operator_id: int, operator_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:

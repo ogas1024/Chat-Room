@@ -930,7 +930,7 @@ def ban_user(self, user_id: int):
             raise
         raise DatabaseError(f"禁用用户失败: {e}")
 
-def unban_user(self, user_id: int):
+def free_user(self, user_id: int):
     """解禁用户"""
     try:
         with self.get_connection() as conn:
@@ -944,7 +944,7 @@ def unban_user(self, user_id: int):
 
             # 记录日志
             self.logger.info("用户解除禁用", user_id=user_id)
-            log_database_operation("UNBAN", "users", user_id=user_id)
+            log_database_operation("free", "users", user_id=user_id)
 
     except Exception as e:
         if isinstance(e, UserNotFoundError):
