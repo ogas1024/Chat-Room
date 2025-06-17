@@ -181,7 +181,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 2:
             return "用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
@@ -220,7 +220,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 2:
             return "用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
@@ -259,7 +259,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 2:
             return "用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
@@ -282,7 +282,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 1:
             return "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
@@ -316,7 +316,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 2:
             return "用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
@@ -359,7 +359,7 @@ class CommandHandler:
             return "请先登录"
 
         if not self._is_admin():
-            return "权限不足：需要管理员权限"
+            return "权限不足：需要Admin权限"
 
         if len(args) < 2:
             return "用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
@@ -393,7 +393,7 @@ class CommandHandler:
             return "不支持的操作。用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
 
     def _is_admin(self) -> bool:
-        """检查当前用户是否为管理员"""
+        """检查当前用户是否为Admin"""
         from shared.constants import ADMIN_USER_ID
         return hasattr(self.client, 'user_id') and self.client.user_id == ADMIN_USER_ID
 

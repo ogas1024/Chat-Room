@@ -169,6 +169,79 @@ class CommandParser:
             "handler": None
         })
 
+        # 管理员命令（新架构）
+        self.register_command("add", {
+            "description": "新增用户",
+            "usage": "/add -u <用户名> <密码>",
+            "options": {
+                "-u": "新增用户"
+            },
+            "handler": None
+        })
+
+        self.register_command("del", {
+            "description": "删除对象",
+            "usage": "/del -u <用户ID> | /del -g <群组ID> | /del -f <文件ID>",
+            "options": {
+                "-u": "删除用户",
+                "-g": "删除群组",
+                "-f": "删除文件"
+            },
+            "handler": None
+        })
+
+        self.register_command("modify", {
+            "description": "修改对象信息",
+            "usage": "/modify -u <用户ID> <字段> <新值> | /modify -g <群组ID> <字段> <新值>",
+            "options": {
+                "-u": "修改用户信息",
+                "-g": "修改群组信息"
+            },
+            "handler": None
+        })
+
+        self.register_command("ban", {
+            "description": "禁言用户或群组",
+            "usage": "/ban -u <用户ID/用户名> | /ban -g <群组ID/群组名>",
+            "options": {
+                "-u": "禁言用户",
+                "-g": "禁言群组"
+            },
+            "handler": None
+        })
+
+        self.register_command("free", {
+            "description": "解禁用户或群组",
+            "usage": "/free -u <用户ID/用户名> | /free -g <群组ID/群组名> | /free -l",
+            "options": {
+                "-u": "解除用户禁言",
+                "-g": "解除群组禁言",
+                "-l": "列出被禁言对象"
+            },
+            "handler": None
+        })
+
+        # 管理员命令（向后兼容）
+        self.register_command("user", {
+            "description": "用户管理（已废弃，建议使用新格式）",
+            "usage": "/user -d <用户ID> | /user -m <用户ID> <字段> <新值>",
+            "options": {
+                "-d": "删除用户",
+                "-m": "修改用户信息"
+            },
+            "handler": None
+        })
+
+        self.register_command("group", {
+            "description": "群组管理（已废弃，建议使用新格式）",
+            "usage": "/group -d <群组ID> | /group -m <群组ID> <字段> <新值>",
+            "options": {
+                "-d": "删除群组",
+                "-m": "修改群组信息"
+            },
+            "handler": None
+        })
+
         # 系统命令
         self.register_command("exit", {
             "description": "退出系统",
@@ -296,6 +369,15 @@ class CommandHandler:
             "send_files": self.handle_send_files,
             "recv_files": self.handle_recv_files,
             "ai": self.handle_ai,
+            # 新的管理员命令架构
+            "add": self.handle_admin_add,
+            "del": self.handle_admin_del,
+            "modify": self.handle_admin_modify,
+            "ban": self.handle_admin_ban,
+            "free": self.handle_admin_free,
+            # 保持向后兼容的旧命令
+            "user": self.handle_admin_user_legacy,
+            "group": self.handle_admin_group_legacy,
             "exit": self.handle_exit,
         }
     
@@ -667,3 +749,307 @@ class CommandHandler:
 
         # 这里可以添加其他清理逻辑
         return True, "已断开连接，正在退出..."
+
+    # ==================== 管理员命令处理器 ====================
+
+    def _is_admin(self) -> bool:
+        """检查当前用户是否为管理员"""
+        from shared.constants import ADMIN_USER_ID
+        return (hasattr(self.chat_client, 'user_id') and
+                self.chat_client.user_id == ADMIN_USER_ID)
+
+    def handle_admin_add(self, command: Command) -> tuple[bool, str]:
+        """处理新增命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if not command.args:
+            return False, "用法: /add -u <用户名> <密码>"
+
+        # 解析参数
+        if len(command.args) < 1 or command.args[0] != "-u":
+            return False, "用法: /add -u <用户名> <密码>"
+
+        if len(command.args) < 3:
+            return False, "用法: /add -u <用户名> <密码>"
+
+        username = command.args[1]
+        password = command.args[2]
+
+        # 发送管理员命令
+        success, message = self.chat_client.send_admin_command(
+            "add", "-u", None, "", f"{username} {password}"
+        )
+
+        return success, message
+
+    def handle_admin_del(self, command: Command) -> tuple[bool, str]:
+        """处理删除命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if len(command.args) < 2:
+            return False, "用法: /del -u <用户ID> 或 /del -g <群组ID> 或 /del -f <文件ID>"
+
+        object_type = command.args[0]
+        target = command.args[1]
+
+        if object_type == "-u":
+            try:
+                user_id = int(target)
+                # 需要确认的操作
+                confirm = input(f"确认删除用户 {user_id}？这将删除用户的所有数据！(y/N): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    return True, "操作已取消"
+
+                success, message = self.chat_client.send_admin_command(
+                    "del", object_type, user_id, "", ""
+                )
+                return success, message
+            except ValueError:
+                return False, "用户ID必须是数字"
+        elif object_type == "-g":
+            try:
+                group_id = int(target)
+                confirm = input(f"确认删除群组 {group_id}？这将删除群组的所有数据！(y/N): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    return True, "操作已取消"
+
+                success, message = self.chat_client.send_admin_command(
+                    "del", object_type, group_id, "", ""
+                )
+                return success, message
+            except ValueError:
+                return False, "群组ID必须是数字"
+        elif object_type == "-f":
+            try:
+                file_id = int(target)
+                confirm = input(f"确认删除文件 {file_id}？此操作不可恢复！(y/N): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    return True, "操作已取消"
+
+                success, message = self.chat_client.send_admin_command(
+                    "del", object_type, file_id, "", ""
+                )
+                return success, message
+            except ValueError:
+                return False, "文件ID必须是数字"
+        else:
+            return False, "删除操作支持: -u(用户) -g(群组) -f(文件)"
+
+    def handle_admin_modify(self, command: Command) -> tuple[bool, str]:
+        """处理修改命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if len(command.args) < 4:
+            return False, "用法: /modify -u <用户ID> <字段> <新值> 或 /modify -g <群组ID> <字段> <新值>"
+
+        object_type = command.args[0]
+        target_id = command.args[1]
+        field = command.args[2]
+        new_value = command.args[3]
+
+        if object_type == "-u":
+            try:
+                user_id = int(target_id)
+                success, message = self.chat_client.send_admin_command(
+                    "modify", object_type, user_id, "", f"{field} {new_value}"
+                )
+                return success, message
+            except ValueError:
+                return False, "用户ID必须是数字"
+        elif object_type == "-g":
+            try:
+                group_id = int(target_id)
+                success, message = self.chat_client.send_admin_command(
+                    "modify", object_type, group_id, "", f"{field} {new_value}"
+                )
+                return success, message
+            except ValueError:
+                return False, "群组ID必须是数字"
+        else:
+            return False, "修改操作支持: -u(用户) -g(群组)"
+
+    def handle_admin_ban(self, command: Command) -> tuple[bool, str]:
+        """处理禁言命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if len(command.args) < 2:
+            return False, "用法: /ban -u <用户ID/用户名> 或 /ban -g <群组ID/群组名>"
+
+        object_type = command.args[0]
+        target = command.args[1]
+
+        if object_type == "-u":
+            confirm = input(f"确认禁言用户 {target}？(y/N): ").strip().lower()
+            if confirm not in ['y', 'yes']:
+                return True, "操作已取消"
+
+            success, message = self.chat_client.send_admin_command(
+                "ban", object_type, None, target, ""
+            )
+            return success, message
+        elif object_type == "-g":
+            confirm = input(f"确认禁言群组 {target}？(y/N): ").strip().lower()
+            if confirm not in ['y', 'yes']:
+                return True, "操作已取消"
+
+            success, message = self.chat_client.send_admin_command(
+                "ban", object_type, None, target, ""
+            )
+            return success, message
+        else:
+            return False, "禁言操作支持: -u(用户) -g(群组)"
+
+    def handle_admin_free(self, command: Command) -> tuple[bool, str]:
+        """处理解禁命令"""
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if not command.args:
+            return False, "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
+
+        object_type = command.args[0]
+
+        if object_type == "-l":
+            # 列出被禁言对象
+            success, message = self.chat_client.send_admin_command(
+                "free", object_type, None, "", ""
+            )
+            return success, message
+        elif object_type == "-u" and len(command.args) > 1:
+            # 解除用户禁言
+            target = command.args[1]
+            success, message = self.chat_client.send_admin_command(
+                "free", object_type, None, target, ""
+            )
+            return success, message
+        elif object_type == "-g" and len(command.args) > 1:
+            # 解除群组禁言
+            target = command.args[1]
+            success, message = self.chat_client.send_admin_command(
+                "free", object_type, None, target, ""
+            )
+            return success, message
+        else:
+            return False, "用法: /free -u <用户ID/用户名> 或 /free -g <群组ID/群组名> 或 /free -l"
+
+    def handle_admin_user_legacy(self, command: Command) -> tuple[bool, str]:
+        """处理用户管理命令（旧版本兼容）"""
+        print("⚠️  警告: /user 命令已废弃，请使用新的命令格式:")
+        print("   删除用户: /del -u <用户ID>")
+        print("   修改用户: /modify -u <用户ID> <字段> <新值>")
+        print("   新增用户: /add -u <用户名> <密码>")
+
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if len(command.args) < 2:
+            return False, "用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
+
+        action = command.args[0]
+        if action == "-d":
+            if len(command.args) < 2:
+                return False, "用法: /user -d <用户ID>"
+
+            try:
+                user_id = int(command.args[1])
+                confirm = input(f"确认删除用户 {user_id}？这将删除用户的所有数据！(y/N): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    return True, "操作已取消"
+
+                success, message = self.chat_client.send_admin_command(
+                    "del", "-u", user_id, "", ""
+                )
+                return success, message
+            except ValueError:
+                return False, "用户ID必须是数字"
+
+        elif action == "-m":
+            if len(command.args) < 4:
+                return False, "用法: /user -m <用户ID> <字段> <新值>"
+
+            try:
+                user_id = int(command.args[1])
+                field = command.args[2]
+                new_value = command.args[3]
+                success, message = self.chat_client.send_admin_command(
+                    "modify", "-u", user_id, "", f"{field} {new_value}"
+                )
+                return success, message
+            except ValueError:
+                return False, "用户ID必须是数字"
+
+        else:
+            return False, "不支持的操作。用法: /user -d <用户ID> 或 /user -m <用户ID> <字段> <新值>"
+
+    def handle_admin_group_legacy(self, command: Command) -> tuple[bool, str]:
+        """处理群组管理命令（旧版本兼容）"""
+        print("⚠️  警告: /group 命令已废弃，请使用新的命令格式:")
+        print("   删除群组: /del -g <群组ID>")
+        print("   修改群组: /modify -g <群组ID> <字段> <新值>")
+
+        if not self.chat_client.is_logged_in():
+            return False, "请先登录"
+
+        if not self._is_admin():
+            return False, "权限不足：需要管理员权限"
+
+        if len(command.args) < 2:
+            return False, "用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"
+
+        action = command.args[0]
+        if action == "-d":
+            if len(command.args) < 2:
+                return False, "用法: /group -d <群组ID>"
+
+            try:
+                group_id = int(command.args[1])
+                confirm = input(f"确认删除群组 {group_id}？这将删除群组的所有数据！(y/N): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    return True, "操作已取消"
+
+                success, message = self.chat_client.send_admin_command(
+                    "del", "-g", group_id, "", ""
+                )
+                return success, message
+            except ValueError:
+                return False, "群组ID必须是数字"
+
+        elif action == "-m":
+            if len(command.args) < 4:
+                return False, "用法: /group -m <群组ID> <字段> <新值>"
+
+            try:
+                group_id = int(command.args[1])
+                field = command.args[2]
+                new_value = command.args[3]
+                success, message = self.chat_client.send_admin_command(
+                    "modify", "-g", group_id, "", f"{field} {new_value}"
+                )
+                return success, message
+            except ValueError:
+                return False, "群组ID必须是数字"
+
+        else:
+            return False, "不支持的操作。用法: /group -d <群组ID> 或 /group -m <群组ID> <字段> <新值>"

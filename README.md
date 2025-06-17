@@ -292,38 +292,38 @@ alice> 你好，这是私聊消息
 
 #### 管理员功能
 ```bash
-# 管理员登录（默认账户：管理员/admin123）
-管理员> /login
-用户名: 管理员
+# 管理员登录（默认账户：Admin/admin123）
+Admin> /login
+用户名: Admin
 密码: admin123
 
 # 新增用户
-管理员> /add -u newuser password123
+Admin> /add -u newuser password123
 ✓ 用户 newuser (ID: 124) 已创建成功
 
 # 禁言违规用户
-管理员> /ban -u 违规用户名
+Admin> /ban -u 违规用户名
 确认禁言用户 违规用户名？(y/N): y
 ✓ 用户 违规用户名 (ID: 123) 已被禁言
 
 # 查看禁言列表
-管理员> /free -l
+Admin> /free -l
 被禁言用户 (1个):
 违规用户名 (ID: 123)
 
 被禁言群组: 无
 
 # 解除禁言
-管理员> /free -u 违规用户名
+Admin> /free -u 违规用户名
 ✓ 用户 违规用户名 (ID: 123) 已解除禁言
 
 # 删除文件
-管理员> /del -f 789
+Admin> /del -f 789
 确认删除文件 789？此操作不可恢复！(y/N): y
 ✓ 文件 违规文件.jpg (ID: 789) 已被删除
 
 # 删除用户（需要确认）
-管理员> /del -u 123
+Admin> /del -u 123
 确认删除用户 123？这将删除用户的所有数据！(y/N): y
 ✓ 用户 违规用户名 (ID: 123) 已被删除
 ```
