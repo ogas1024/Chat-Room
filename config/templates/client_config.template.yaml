@@ -4,7 +4,7 @@
 # 连接配置
 connection:
   default_host: localhost           # 默认服务器地址
-  default_port: 8888               # 默认服务器端口
+  default_port: 8888                # 默认服务器端口
   connection_timeout: 10            # 连接超时时间（秒）
   reconnect_attempts: 3             # 重连尝试次数
   reconnect_delay: 5                # 重连延迟（秒）
@@ -100,5 +100,57 @@ performance:
 debug:
   enabled: false                    # 启用调试模式
   show_raw_messages: false          # 显示原始消息
-  log_network_traffic: false       # 记录网络流量
-  performance_monitoring: false    # 性能监控
+  log_network_traffic: false        # 记录网络流量
+  performance_monitoring: false     # 性能监控
+
+# ==================== 配置说明 ====================
+#
+# 1. 连接配置说明：
+#    - default_host: 服务器地址（localhost=本地，IP地址=远程服务器）
+#    - default_port: 服务器端口，需与服务器配置一致
+#    - 远程连接时确保网络可达且服务器已启动
+#
+# 2. 界面模式选择：
+#    - tui: 文本用户界面，功能丰富，推荐使用
+#    - cli: 命令行界面，简单轻量，适合脚本使用
+#
+# 3. 文件传输配置：
+#    - download_path: 下载文件保存目录
+#    - max_download_size: 最大下载文件大小限制
+#    - 确保下载目录有足够的磁盘空间和写入权限
+#
+# 4. 性能优化建议：
+#    - 网络较慢时可减少 buffer_size 和 chunk_size
+#    - 低配置设备可关闭 auto_scroll 和 notifications_enabled
+#    - 启用 lazy_loading 可减少内存占用
+#
+# 5. 日志配置：
+#    - 调试时建议启用 file_enabled 并设置 level 为 DEBUG
+#    - 生产使用时建议关闭 console_enabled 避免干扰TUI界面
+#    - 定期清理日志文件避免占用过多磁盘空间
+#
+# 6. 用户体验优化：
+#    - save_chat_history: 保存聊天记录到本地
+#    - auto_login: 记住登录状态，下次自动登录
+#    - show_timestamps: 显示消息时间戳，便于查看消息时间
+#
+# 7. TUI界面自定义：
+#    - 可调整 chat_area_height 和 sidebar_width 适应屏幕大小
+#    - color_scheme 支持自定义颜色主题
+#    - refresh_rate 影响界面响应速度和CPU占用
+#
+# 8. 快捷键说明：
+#    - message_send_key: Enter=直接发送，Ctrl+Enter=换行后发送
+#    - 具体快捷键请参考客户端帮助文档
+#
+# 9. 故障排除：
+#    - 连接失败：检查服务器地址、端口、网络连接
+#    - 界面异常：尝试切换到 cli 模式或重置配置文件
+#    - 文件传输失败：检查文件大小限制和磁盘空间
+#
+# 10. 配置文件位置：
+#     - 当前文件：config/client_config.yaml
+#     - 模板文件：config/templates/client_config.template.yaml
+#     - 修改配置后重启客户端生效
+#
+# ==================== 配置说明结束 ====================

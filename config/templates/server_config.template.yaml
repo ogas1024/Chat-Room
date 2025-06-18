@@ -1,98 +1,141 @@
-# Chat-Room 配置文件模板
+# Chat-Room 服务器配置文件模板
 # 请根据需要修改以下配置项
+# 注意：修改配置后需要重启服务器才能生效
 
+# 服务器网络配置
 server:
-  host: localhost
-  port: 8888
-  max_connections: 100
-  buffer_size: 4096
-  heartbeat_interval: 30
-  connection_timeout: 300
+  host: 0.0.0.0                       # 服务器监听地址（localhost=仅本地，0.0.0.0=所有接口）
+  port: 8888                          # 服务器监听端口
+  max_connections: 100                # 最大同时连接数
+  buffer_size: 4096                   # 网络缓冲区大小（字节）
+  heartbeat_interval: 30              # 心跳检测间隔（秒）
+  connection_timeout: 300             # 连接超时时间（秒，5分钟）
+
+# 数据库配置
 database:
-  path: server/data/chatroom.db
-  backup_enabled: true
-  backup_interval: 3600
-  backup_count: 5
-  auto_vacuum: true
+  path: server/data/chatroom.db       # SQLite数据库文件路径
+  backup_enabled: true                # 启用数据库自动备份
+  backup_interval: 3600               # 备份间隔（秒，1小时）
+  backup_count: 5                     # 保留备份文件数量
+  auto_vacuum: true                   # 启用数据库自动清理
+
+# 文件存储配置
 file_storage:
-  path: server/data/files
-  max_file_size: 104857600
-  allowed_extensions:
-  - .txt
-  - .doc
-  - .docx
-  - .pdf
-  - .jpg
-  - .jpeg
-  - .png
-  - .gif
-  - .mp3
-  - .mp4
-  - .avi
-  - .zip
-  - .rar
-  - .py
-  - .js
-  - .html
-  - .css
-  chunk_size: 8192
-  auto_cleanup: true
-  cleanup_interval: 86400
+  path: server/data/files             # 文件存储目录
+  max_file_size: 104857600            # 最大文件大小（字节，100MB）
+  allowed_extensions:                 # 允许上传的文件扩展名
+    - .txt                            # 文本文件
+    - .doc                            # Word文档
+    - .docx
+    - .pdf                            # PDF文档
+    - .jpg                            # 图片文件
+    - .jpeg
+    - .png
+    - .gif
+    - .mp3                            # 音频文件
+    - .mp4                            # 视频文件
+    - .avi
+    - .zip                            # 压缩文件
+    - .rar
+    - .py                             # 代码文件
+    - .js
+    - .html
+    - .css
+  chunk_size: 8192                    # 文件传输块大小（字节）
+  auto_cleanup: true                  # 启用自动清理过期文件
+  cleanup_interval: 86400             # 清理检查间隔（秒，24小时）
+
+# AI智能助手配置（基于智谱AI GLM模型）
 ai:
-  enabled: true
-  api_key: '324216afd1584a88b1a3b0d532b897eb.cm74bxxiHWhSsKZE'
-  model: glm-4-flash
-  max_tokens: 1024
-  temperature: 0.7
-  top_p: 0.9
-  max_context_length: 10
-  context_timeout: 3600
-  enable_group_chat: true
-  enable_private_chat: true
-  auto_reply: true
-  trigger_keywords:
-  - ai
-  - 人工智能
-  - 助手
-  - 机器人
-  - 智能
-  - 问答
-  require_at_mention: false
-  available_models:
-  - glm-4-flash
-  - glm-4
-  - glm-4-plus
-  - glm-4-air
-  - glm-4-airx
-  - glm-4-long
+  enabled: true                       # 启用AI功能
+  api_key: ""                         # 智谱AI API密钥（请在https://bigmodel.cn/获取）
+  model: glm-4-flash                  # 使用的AI模型（推荐glm-4-flash，免费且快速）
+  max_tokens: 1024                    # 最大生成token数
+  temperature: 0.7                    # 生成温度（0.0-2.0，越高越随机）
+  top_p: 0.9                          # 核采样参数（0.0-1.0）
+  max_context_length: 10              # 最大上下文消息数量
+  context_timeout: 3600               # 上下文超时时间（秒，1小时）
+  enable_group_chat: true             # 在群聊中启用AI
+  enable_private_chat: true           # 在私聊中启用AI
+  auto_reply: true                    # 自动回复（当检测到触发条件时）
+  trigger_keywords:                   # 触发AI回复的关键词
+    - ai                              # 英文关键词
+    - 人工智能                         # 中文关键词
+    - 助手
+    - 机器人
+    - 智能
+    - 问答
+  require_at_mention: false           # 是否需要@AI才能触发（false=关键词触发，true=仅@触发）
+  available_models:                   # 可用的AI模型列表
+    - glm-4-flash                     # 免费模型，速度快，适合日常聊天
+    - glm-4                           # 标准模型，平衡性能和质量
+    - glm-4-plus                      # 增强模型，质量更高
+    - glm-4-air                       # 轻量模型
+    - glm-4-airx                      # 轻量增强模型
+    - glm-4-long                      # 长文本模型，支持更长上下文
+
+# 日志配置
 logging:
-  level: INFO
-  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-  file_enabled: true
-  file_path: logs/server.log
-  file_max_size: 10485760
-  file_backup_count: 5
-  console_enabled: true
+  level: INFO                         # 日志级别（DEBUG, INFO, WARNING, ERROR, CRITICAL）
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # 日志格式
+  file_enabled: true                  # 启用文件日志
+  file_path: logs/server.log          # 日志文件路径
+  file_max_size: 10485760             # 日志文件最大大小（字节，10MB）
+  file_backup_count: 5                # 日志文件备份数量
+  console_enabled: true               # 启用控制台日志输出
+# 安全配置
 security:
-  password_min_length: 6
-  password_hash_rounds: 12
-  session_timeout: 86400
-  max_login_attempts: 5
-  login_cooldown: 300
-  enable_rate_limiting: true
-  rate_limit_requests: 100
-  rate_limit_window: 60
+  password_min_length: 6              # 密码最小长度
+  password_hash_rounds: 12            # 密码哈希轮数（越高越安全但越慢）
+  session_timeout: 86400              # 会话超时时间（秒，24小时）
+  max_login_attempts: 5               # 最大登录尝试次数
+  login_cooldown: 300                 # 登录失败冷却时间（秒，5分钟）
+  enable_rate_limiting: true          # 启用请求频率限制
+  rate_limit_requests: 100            # 频率限制：每个时间窗口的最大请求数
+  rate_limit_window: 60               # 频率限制时间窗口（秒）
+# 聊天功能配置
 chat:
-  default_public_chat: public
-  max_message_length: 2048
-  message_history_limit: 1000
-  auto_create_public_chat: true
-  allow_private_chat: true
-  max_chat_members: 100
+  default_public_chat: public         # 默认公共聊天室名称
+  max_message_length: 2048            # 最大消息长度（字符）
+  message_history_limit: 1000         # 消息历史记录限制
+  auto_create_public_chat: true       # 自动创建公共聊天室
+  allow_private_chat: true            # 允许私聊功能
+  max_chat_members: 100               # 聊天室最大成员数
+
+# 性能优化配置
 performance:
-  enable_compression: true
-  compression_level: 6
-  enable_caching: true
-  cache_size: 1000
-  cache_ttl: 300
-  worker_threads: 4
+  enable_compression: true            # 启用数据压缩
+  compression_level: 6                # 压缩级别（1-9，越高压缩率越高但CPU消耗越大）
+  enable_caching: true                # 启用缓存
+  cache_size: 1000                    # 缓存大小（条目数）
+  cache_ttl: 300                      # 缓存生存时间（秒，5分钟）
+  worker_threads: 4                   # 工作线程数（建议设置为CPU核心数）
+
+# ==================== 配置说明 ====================
+#
+# 1. 远程部署配置：
+#    - 将 server.host 设置为 "0.0.0.0" 以允许外部连接
+#    - 确保防火墙开放指定端口
+#    - 云服务器需要配置安全组规则
+#
+# 2. AI功能配置：
+#    - 访问 https://bigmodel.cn/ 获取API密钥
+#    - 将密钥填入 ai.api_key 字段
+#    - 推荐使用 glm-4-flash 模型（免费且快速）
+#
+# 3. 安全建议：
+#    - 生产环境建议增加密码复杂度要求
+#    - 定期备份数据库文件
+#    - 监控日志文件大小，避免磁盘空间不足
+#
+# 4. 性能调优：
+#    - 根据服务器配置调整 max_connections 和 worker_threads
+#    - 大文件传输场景可适当增加 buffer_size 和 chunk_size
+#    - 高并发场景建议启用压缩和缓存
+#
+# 5. 文件路径说明：
+#    - 所有路径都是相对于项目根目录
+#    - 确保服务器进程有相应目录的读写权限
+#    - 建议定期清理过期的文件和日志
+#
+# ==================== 配置说明结束 ====================
