@@ -430,148 +430,136 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.functional)
         elif "performance" in str(item.fspath):
             item.add_marker(pytest.mark.performance)
-
-# 自定义断言助手
-class ChatRoomAssertions:
-    """Chat-Room专用断言助手"""
-    
-    @staticmethod
-    def assert_user_valid(user_data: Dict[str, Any]):
-        """断言用户数据有效"""
-        required_fields = ["id", "username", "email"]
-        for field in required_fields:
-            assert field in user_data, f"用户数据缺少必需字段: {field}"
-        
-        assert isinstance(user_data["id"], int), "用户ID必须是整数"
-        assert len(user_data["username"]) >= 3, "用户名长度至少3个字符"
-        assert "@" in user_data["email"], "邮箱格式无效"
-    
-    @staticmethod
-    def assert_message_valid(message_data: Dict[str, Any]):
-        """断言消息数据有效"""
-        required_fields = ["content", "user_id"]
-        for field in required_fields:
-            assert field in message_data, f"消息数据缺少必需字段: {field}"
-        
-        assert len(message_data["content"]) > 0, "消息内容不能为空"
-        assert isinstance(message_data["user_id"], int), "用户ID必须是整数"
-    
-    @staticmethod
-    def assert_group_valid(group_data: Dict[str, Any]):
-        """断言群组数据有效"""
-        required_fields = ["name", "created_by"]
-        for field in required_fields:
-            assert field in group_data, f"群组数据缺少必需字段: {field}"
-        
-        assert len(group_data["name"]) >= 2, "群组名称长度至少2个字符"
-        assert isinstance(group_data["created_by"], int), "创建者ID必须是整数"
-    
-    @staticmethod
-    def assert_websocket_message_valid(ws_message: Dict[str, Any]):
-        """断言WebSocket消息有效"""
-        required_fields = ["type", "data"]
-        for field in required_fields:
-            assert field in ws_message, f"WebSocket消息缺少必需字段: {field}"
-        
-        valid_types = ["message", "user_join", "user_leave", "group_update", "error"]
-        assert ws_message["type"] in valid_types, f"无效的消息类型: {ws_message['type']}"
-
-@pytest.fixture
-def assert_helper():
-    """断言助手夹具"""
-    return ChatRoomAssertions()
-
-# 性能测试助手
-class PerformanceHelper:
-    """性能测试助手"""
-    
-    def __init__(self):
-        self.start_time = None
-        self.end_time = None
-    
-    def start_timer(self):
-        """开始计时"""
-        self.start_time = datetime.now()
-    
-    def stop_timer(self):
-        """停止计时"""
-        self.end_time = datetime.now()
-    
-    def get_duration(self) -> float:
-        """获取持续时间（秒）"""
-        if self.start_time and self.end_time:
-            return (self.end_time - self.start_time).total_seconds()
-        return 0.0
-    
-    def assert_performance(self, max_duration: float, operation_name: str = "操作"):
-        """断言性能要求"""
-        duration = self.get_duration()
-        assert duration <= max_duration, f"{operation_name}耗时{duration:.3f}秒，超过限制{max_duration}秒"
-
-@pytest.fixture
-def performance_helper():
-    """性能测试助手夹具"""
-    return PerformanceHelper()
-
-# 数据生成器
-class TestDataGenerator:
-    """测试数据生成器"""
-    
-    @staticmethod
-    def generate_user(user_id: int = None, username: str = None) -> Dict[str, Any]:
-        """生成用户数据"""
-        import random
-        import string
-        
-        if user_id is None:
-            user_id = random.randint(1000, 9999)
-        
-        if username is None:
-            username = ''.join(random.choices(string.ascii_lowercase, k=8))
-        
-        return {
-            "id": user_id,
-            "username": username,
-            "email": f"{username}@example.com",
-            "password_hash": "hashed_password",
-            "is_active": True
-        }
-    
-    @staticmethod
-    def generate_message(user_id: int, group_id: int = None, content: str = None) -> Dict[str, Any]:
-        """生成消息数据"""
-        if content is None:
-            content = f"测试消息 {datetime.now().isoformat()}"
-        
-        return {
-            "content": content,
-            "user_id": user_id,
-            "group_id": group_id,
-            "message_type": "text"
-        }
-    
-    @staticmethod
-    def generate_group(created_by: int, name: str = None) -> Dict[str, Any]:
-        """生成群组数据"""
-        if name is None:
-            name = f"测试群组 {datetime.now().strftime('%H%M%S')}"
-        
-        return {
-            "name": name,
-            "description": f"{name}的描述",
-            "created_by": created_by,
-            "is_active": True
-        }
-
-@pytest.fixture
-def data_generator():
-    """测试数据生成器夹具"""
-    return TestDataGenerator()
 ```
 
-Now let me create the unit testing document:
+## 🛠️ Pytest高级特性
 
+### 参数化测试
 
-<function_calls>
-<invoke name="save-file">
-<parameter name="instructions_reminder">LIMIT THE FILE CONTENT TO AT MOST 300 LINES. IF MORE CONTENT NEEDS TO BE ADDED USE THE str-replace-editor TOOL TO EDIT THE FILE AFTER IT HAS BEEN CREATED.
+```python
+import pytest
+
+@pytest.mark.parametrize("username,email,password,expected", [
+    ("validuser", "valid@example.com", "validpass123", True),
+    ("ab", "valid@example.com", "validpass123", False),  # 用户名太短
+    ("validuser", "invalid-email", "validpass123", False),  # 邮箱无效
+    ("validuser", "valid@example.com", "123", False),  # 密码太短
+])
+def test_user_validation(username, email, password, expected):
+    """参数化测试用户验证"""
+    result = validate_user(username, email, password)
+    assert result == expected
+```
+
+### 夹具作用域
+
+```python
+@pytest.fixture(scope="session")
+def database_connection():
+    """会话级别的数据库连接"""
+    conn = create_database_connection()
+    yield conn
+    conn.close()
+
+@pytest.fixture(scope="module")
+def test_data():
+    """模块级别的测试数据"""
+    return load_test_data()
+
+@pytest.fixture(scope="function")
+def clean_database(database_connection):
+    """函数级别的数据库清理"""
+    yield
+    clean_all_tables(database_connection)
+```
+
+### 自定义标记
+
+```python
+# pytest.ini
+[tool:pytest]
+markers =
+    unit: 单元测试
+    integration: 集成测试
+    slow: 慢速测试
+    network: 需要网络连接的测试
+
+# 使用标记
+@pytest.mark.unit
+def test_user_creation():
+    pass
+
+@pytest.mark.slow
+@pytest.mark.network
+def test_api_integration():
+    pass
+
+# 运行特定标记的测试
+# pytest -m unit
+# pytest -m "not slow"
+# pytest -m "unit and not network"
+```
+
+## 📊 测试报告和覆盖率
+
+### 生成测试报告
+
+```bash
+# HTML报告
+pytest --html=reports/report.html --self-contained-html
+
+# JUnit XML报告
+pytest --junitxml=reports/junit.xml
+
+# 覆盖率报告
+pytest --cov=src --cov-report=html --cov-report=term
+
+# 详细输出
+pytest -v --tb=short
+```
+
+### 覆盖率配置
+
+```ini
+# .coveragerc
+[run]
+source = src/
+omit = 
+    */tests/*
+    */venv/*
+    */migrations/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+
+[html]
+directory = htmlcov
+```
+
+## 📋 学习检查清单
+
+完成本节学习后，请确认您能够：
+
+- [ ] 理解pytest框架的核心概念
+- [ ] 编写和组织测试夹具
+- [ ] 使用参数化测试
+- [ ] 配置测试标记和过滤
+- [ ] 生成测试报告和覆盖率分析
+- [ ] 使用Mock和AsyncMock进行测试
+- [ ] 配置pytest插件和扩展
+- [ ] 组织大型项目的测试结构
+
+## 🚀 下一步
+
+掌握pytest框架后，请继续学习：
+- [单元测试实践](unit-testing.md) - 具体的单元测试编写
+- [集成测试实践](integration-testing.md) - 集成测试方法
+- [TDD实践](tdd-practices.md) - 测试驱动开发
+
+---
+
+**Pytest是Python生态中最强大的测试框架，掌握它将大大提高你的测试效率！** 🧪

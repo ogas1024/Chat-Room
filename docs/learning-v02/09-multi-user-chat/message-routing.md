@@ -735,9 +735,89 @@ if __name__ == "__main__":
     demo_message_routing()
 ```
 
-现在创建并发处理文档：
+## 🔄 消息路由优化
 
-<function_calls>
-<invoke name="save-file">
-<parameter name="instructions_reminder">LIMIT THE FILE CONTENT TO AT MOST 300 LINES. IF MORE CONTENT NEEDS TO BE ADDED USE THE str-replace-editor TOOL TO EDIT THE FILE AFTER IT HAS BEEN CREATED.</parameter>
-<parameter name="path">docs/learning-v02/05-multi-user-chat/concurrent-handling.md</parameter>
+### 性能优化策略
+
+```mermaid
+graph TD
+    subgraph "路由性能优化"
+        A[消息缓存<br/>Message Cache] --> A1[内存缓存<br/>Memory Cache]
+        A --> A2[Redis缓存<br/>Redis Cache]
+
+        B[连接池管理<br/>Connection Pool] --> B1[连接复用<br/>Connection Reuse]
+        B --> B2[负载均衡<br/>Load Balance]
+
+        C[异步处理<br/>Async Processing] --> C1[协程并发<br/>Coroutine Concurrency]
+        C --> C2[任务队列<br/>Task Queue]
+
+        D[路由算法<br/>Routing Algorithm] --> D1[哈希路由<br/>Hash Routing]
+        D --> D2[权重路由<br/>Weighted Routing]
+    end
+
+    style A fill:#e8f5e8
+    style B fill:#fff3cd
+    style C fill:#f8d7da
+    style D fill:#d1ecf1
+```
+
+### 路由监控和诊断
+
+```python
+# 路由性能监控
+class RouteMonitor:
+    """路由性能监控器"""
+
+    def __init__(self):
+        self.metrics = {
+            'total_messages': 0,
+            'success_rate': 0.0,
+            'average_latency': 0.0,
+            'error_count': 0
+        }
+
+    def record_route_success(self, latency):
+        """记录路由成功"""
+        self.metrics['total_messages'] += 1
+        # 更新平均延迟
+        current_avg = self.metrics['average_latency']
+        total = self.metrics['total_messages']
+        self.metrics['average_latency'] = (current_avg * (total - 1) + latency) / total
+
+    def record_route_error(self):
+        """记录路由错误"""
+        self.metrics['error_count'] += 1
+        self.metrics['total_messages'] += 1
+
+    def get_success_rate(self):
+        """获取成功率"""
+        if self.metrics['total_messages'] == 0:
+            return 0.0
+
+        success_count = self.metrics['total_messages'] - self.metrics['error_count']
+        return success_count / self.metrics['total_messages']
+```
+
+## 📋 学习检查清单
+
+完成本节学习后，请确认您能够：
+
+- [ ] 理解消息路由系统的架构设计
+- [ ] 实现群组消息和私聊消息的路由
+- [ ] 处理离线消息存储和投递
+- [ ] 设计消息路由的重试机制
+- [ ] 实现路由性能监控
+- [ ] 优化消息路由的性能
+- [ ] 处理路由过程中的异常情况
+- [ ] 设计可扩展的路由架构
+
+## 🚀 下一步
+
+完成消息路由学习后，请继续学习：
+- [群组管理系统](group-management.md) - 群组功能实现
+- [状态管理](state-management.md) - 系统状态维护
+- [第6章：数据库集成](../06-database-integration/README.md)
+
+---
+
+**高效的消息路由是聊天系统的核心，确保消息准确快速地传达给目标用户！** 📨

@@ -14,18 +14,18 @@
 
 ```mermaid
 graph TD
-    A[第1章: Python基础与环境搭建] --> B[第2章: Socket网络编程入门]
-    B --> C[第3章: 简单聊天室实现]
-    C --> D[第4章: 数据库设计与用户系统]
-    D --> E[第5章: 多人聊天与消息管理]
-    E --> F[第6章: 文件传输功能]
-    F --> G[第7章: AI智能助手集成]
-    G --> H[第8章: 用户界面设计]
-    H --> I[第9章: 管理员系统与权限控制]
-    I --> J[第10章: 日志系统与错误处理]
-    J --> K[第11章: 测试驱动开发]
-    K --> L[第12章: 性能优化与部署]
-    
+    A[01章: 开发环境搭建] --> B[02章: 计算机基础知识]
+    B --> C[03章: 软件工程基础]
+    C --> D[04章: 聊天室基础架构]
+    D --> E[05章: 多用户聊天系统]
+    E --> F[06章: 数据库集成]
+    F --> G[07章: AI智能助手集成]
+    G --> H[08章: 文件传输功能]
+    H --> I[09章: 用户界面设计]
+    I --> J[10章: 管理员系统]
+    J --> K[11章: 测试与质量保证]
+    K --> L[12章: 优化与部署]
+
     style A fill:#e8f5e8
     style L fill:#f8d7da
 ```
@@ -34,76 +34,119 @@ graph TD
 
 ```
 docs/learning-v02/
-├── README.md                    # 本文件 - 学习路径总览
-├── 00-preparation/              # 准备工作
-│   ├── environment-setup.md     # 开发环境搭建
-│   ├── project-overview.md      # 项目整体介绍
-│   └── learning-guide.md        # 学习方法指导
-├── 01-python-basics/            # 第1章：Python基础
-│   ├── syntax-fundamentals.md   # Python语法基础
-│   ├── data-structures.md       # 数据结构详解
-│   ├── functions-modules.md     # 函数与模块
-│   └── oop-basics.md           # 面向对象编程基础
-├── 02-socket-programming/       # 第2章：Socket网络编程
-│   ├── network-concepts.md      # 网络编程概念
-│   ├── tcp-basics.md           # TCP协议基础
-│   ├── socket-api.md           # Socket API详解
-│   └── simple-client-server.md # 简单客户端-服务器
-├── 03-simple-chat/             # 第3章：简单聊天室
-│   ├── protocol-design.md       # 通信协议设计
-│   ├── message-handling.md      # 消息处理机制
-│   ├── threading-basics.md      # 多线程编程基础
-│   └── error-handling.md       # 错误处理策略
-├── 04-database-user-system/    # 第4章：数据库与用户系统
-│   ├── sqlite-basics.md         # SQLite数据库基础
-│   ├── database-design.md       # 数据库设计原理
-│   ├── user-authentication.md   # 用户认证系统
-│   └── data-models.md          # 数据模型设计
-├── 05-multi-user-chat/         # 第5章：多人聊天
-│   ├── chat-groups.md           # 聊天组管理
-│   ├── message-routing.md       # 消息路由机制
-│   ├── concurrent-handling.md   # 并发处理
-│   └── state-management.md     # 状态管理
-├── 06-file-transfer/           # 第6章：文件传输
-│   ├── file-protocol.md         # 文件传输协议
-│   ├── chunked-transfer.md      # 分块传输技术
-│   ├── progress-tracking.md     # 进度跟踪
-│   └── security-validation.md  # 安全验证
-├── 07-ai-integration/          # 第7章：AI集成
-│   ├── api-integration.md       # API集成基础
-│   ├── glm4-flash.md           # GLM-4-Flash使用
-│   ├── context-management.md    # 上下文管理
-│   └── async-processing.md     # 异步处理
-├── 08-user-interface/          # 第8章：用户界面
-│   ├── tui-concepts.md          # TUI界面概念
-│   ├── textual-framework.md     # Textual框架
-│   ├── component-design.md      # 组件化设计
-│   └── theme-system.md         # 主题系统
-├── 09-admin-system/            # 第9章：管理员系统
-│   ├── permission-model.md      # 权限模型设计
-│   ├── command-system.md        # 命令系统
-│   ├── crud-operations.md       # CRUD操作
-│   └── security-measures.md    # 安全措施
-├── 10-logging-errors/          # 第10章：日志与错误处理
-│   ├── loguru-system.md         # Loguru日志系统
-│   ├── error-strategies.md      # 错误处理策略
-│   ├── debugging-techniques.md  # 调试技巧
-│   └── monitoring.md           # 监控与诊断
-├── 11-testing/                 # 第11章：测试驱动开发
-│   ├── testing-concepts.md      # 测试概念
-│   ├── pytest-framework.md     # pytest框架
-│   ├── mock-testing.md         # Mock测试
-│   └── tdd-practice.md         # TDD实践
-├── 12-optimization-deployment/ # 第12章：优化与部署
-│   ├── performance-tuning.md    # 性能调优
-│   ├── memory-management.md     # 内存管理
-│   ├── deployment-strategies.md # 部署策略
-│   └── monitoring-production.md # 生产监控
-└── appendix/                   # 附录
-    ├── code-examples/           # 完整代码示例
-    ├── exercises/               # 练习题库
-    ├── troubleshooting.md       # 故障排除
-    └── resources.md            # 学习资源
+├── README.md                                      # 学习路径总览
+├── 00-overview/                                 # 准备工作
+│   ├── environment-setup.md                       # 开发环境搭建
+│   ├── project-overview.md                        # 项目整体介绍
+│   └── learning-guide.md                          # 学习方法指导
+├── 01-python-basics/                            # Python编程基础
+│   ├── python-syntax-fundamentals.md              # Python语法基础
+│   ├── functions-modules.md                       # 函数和模块系统
+│   ├── object-oriented-programming.md             # 面向对象编程基础
+│   ├── exception-handling.md                      # TODO 异常处理基础
+│   ├── file-io.md                                 # TODO 文件操作和I/O
+│   └── builtin-libraries.md                       # TODO 常用内置库介绍
+├── 02-development-environment/                  # 开发环境配置
+│   ├── python-installation.md                     # Python安装和版本管理
+│   ├── ide-configuration.md                       # IDE选择和配置
+│   ├── virtual-environments.md                    # 虚拟环境管理
+│   ├── package-management.md                      # TODO 包管理工具（pip/uvx）
+│   ├── git-basics.md                              # Git版本控制基础
+│   └── debugging-tools.md                         # 调试工具和技巧
+├── 03-computer-fundamentals/                    # 计算机基础
+│   ├── network-fundamentals.md                    # 网络基础原理（重点）
+│   ├── operating-systems.md                       # 操作系统基础
+│   ├── database-data-structures.md                # 数据结构和数据库基础
+│   ├── encoding-and-charset.md                    # TODO 编码和字符集
+│   └── security-basics.md                         # TODO 安全基础概念
+├── 04-software-engineering/                     # 软件工程
+│   ├── requirements-analysis.md                   # 项目需求分析和设计
+│   ├── socket-basics.md                           # 最简单的Socket通信实现
+│   ├── system-architecture.md                     # 客户端-服务器架构
+│   ├── message-protocol.md                        # 消息收发功能
+│   ├── error-handling.md                          # 错误处理
+│   └── project-organization.md                    # 项目结构组织
+├── 05-chatroom-basics/                          # 简单聊天室原型
+│   ├── requirements-analysis.md                   # 项目需求分析和设计
+│   ├── socket-basic-demo.md                       # 最简单的Socket通信实现
+│   ├── basic-architecture.md                      # 基础客户端-服务器架构
+│   ├── message-exchange.md                        # 简单的消息收发功能
+│   ├── basic-error-handling.md                    # 基础的错误处理
+│   └── structure-overview.md                      # 项目结构组织
+├── 06-socket-programming/                       # Socket网络编程
+│   ├── network-concepts.md                        # 网络编程概念
+│   ├── tcp-basics.md                              # TCP协议基础
+│   ├── socket-api.md                              # Socket API详解
+├── 07-simple-chat/                              # 简单聊天室
+│   ├── protocol-design.md                         # 通信协议设计
+│   ├── message-handling.md                        # 消息处理机制
+│   ├── threading-basics.md                        # 多线程编程基础
+│   └── error-handling.md                          # 错误处理策略
+│   └── simple-client-server.md                    # 简单客户端-服务器
+├── 08-database-user-system/                     # 数据库与用户系统
+│   ├── sqlite-basics.md                           # SQLite数据库基础
+│   ├── database-design.md                         # 数据库设计原理
+│   ├── user-authentication.md                     # 用户认证系统
+│   └── data-models.md                             # 数据模型设计
+├── 09-multi-user-chat/                          # 多人聊天
+│   ├── group-management.md                        # 聊天组管理
+│   ├── message-routing.md                         # 消息路由机制
+│   ├── concurrent-handling.md                     # 并发处理
+│   └── state-management.md                        # 状态管理
+├── 10-file-transfer/                            # 文件传输
+│   ├── file-protocol.md                           # 文件传输协议
+│   ├── chunked-transfer.md                        # 分块传输技术
+│   ├── progress-tracking.md                       # 进度跟踪
+│   └── security-validation.md                     # 安全验证
+├── 11-ai-integration/                           # AI集成
+│   ├── api-integration.md                         # API集成基础
+│   ├── glm-4-flash-features.md                    # GLM-4-Flash使用
+│   ├── context-management.md                      # 上下文管理
+│   └── async-processing.md                        # 异步处理
+├── 12-user-interface/                           # 用户界面
+│   ├── tui-concepts.md                            # TUI界面概念
+│   ├── textual-framework.md                       # Textual框架
+│   ├── component-design.md                        # 组件化设计
+│   └── theme-system.md                            # 主题系统
+├── 13-admin-system/                             # 管理员系统
+│   ├── permission-model.md                        # 权限模型设计
+│   ├── command-system.md                          # 命令系统
+│   ├── crud-operations.md                         # CRUD操作
+│   └── security-measures.md                       # 安全措施
+├── 14-logging-error-handling/                   # 日志与错误处理
+│   ├── loguru-system.md                           # Loguru日志系统
+│   ├── error-strategies.md                        # 错误处理策略
+│   ├── debugging-techniques.md                    # 调试技巧
+│   └── monitoring-diagnostics.md                  # 监控与诊断
+├── 15-testing-quality/                          # 测试驱动开发
+│   ├── tdd-practices.md                           # TDD实践
+│   ├── pytest-framework.md                        # pytest框架
+│   ├── unit-testing.md                            # 单元测试
+│   ├── integration-testing.md                     # 集成测试
+│   ├── test-coverage.md                           # 测试覆盖率
+│   └── mock-testing.md                            # TODO Mock测试
+├── 16-optimization-deployment/                  # 优化与部署
+│   ├── performance-optimization.md                # 性能调优
+│   ├── monitoring-operations.md                   # 监控运维
+│   ├── containerization-deployment.md             # 容器部署
+│   ├── cicd-automation.md                         # 持续集成与部署
+│   └── deployment-strategies.md                   # TODO 部署策略
+├── 17-advanced-project-practice/                # 高级项目实践
+│   ├── feature-planning-analysis.md               # 功能扩展与规划
+│   ├── performance-bottleneck-identification.md   # 性能瓶颈定位
+│   └── troubleshooting-methodology.md             # 生产环境问题排查
+├── 18-advanced-project-practice/                # 进阶实战：上线后的演进
+│   ├── feature-optimization.md                    # TODO 功能扩展和优化策略
+│   ├── code-refactoring.md                        # TODO 代码重构和架构演进
+│   ├── tuning-case.md                             # TODO 性能调优实战案例
+│   ├── troubleshooting-production.md              # TODO 生产环境问题排查
+│   ├── user-feedback.md                           # TODO 用户反馈处理和迭代
+│   └── contributing-guide.md                      # TODO 开源项目贡献指南
+└── appendix/                                   # 附录资源
+    ├── code-examples/                             # 代码示例库
+    ├── exercises/                                 # 练习题库
+    ├── troubleshooting.md                         # 故障排除指南
+    └── resources.md                               # 学习资源推荐
 ```
 
 ## 🎓 学习特色
@@ -132,18 +175,18 @@ docs/learning-v02/
 
 | 章节 | 预计学习时间 | 难度等级 | 前置要求 |
 |------|-------------|----------|----------|
-| 第1章 | 3-5天 | ⭐ | 无 |
-| 第2章 | 5-7天 | ⭐⭐ | Python基础 |
-| 第3章 | 7-10天 | ⭐⭐⭐ | Socket基础 |
-| 第4章 | 5-7天 | ⭐⭐ | Python基础 |
-| 第5章 | 7-10天 | ⭐⭐⭐ | 数据库基础 |
-| 第6章 | 5-7天 | ⭐⭐⭐ | 网络编程 |
-| 第7章 | 3-5天 | ⭐⭐ | API使用 |
-| 第8章 | 7-10天 | ⭐⭐⭐⭐ | UI设计概念 |
-| 第9章 | 5-7天 | ⭐⭐⭐ | 权限概念 |
-| 第10章 | 3-5天 | ⭐⭐ | 调试经验 |
-| 第11章 | 7-10天 | ⭐⭐⭐⭐ | 编程经验 |
-| 第12章 | 5-7天 | ⭐⭐⭐⭐⭐ | 系统知识 |
+| 01章 | 3-5天 | ⭐ | 无 |
+| 02章 | 5-7天 | ⭐⭐ | 基础编程概念 |
+| 03章 | 7-10天 | ⭐⭐⭐ | Python基础 |
+| 04章 | 7-10天 | ⭐⭐⭐ | Socket基础 |
+| 05章 | 7-10天 | ⭐⭐⭐⭐ | 网络编程 |
+| 06章 | 5-7天 | ⭐⭐⭐ | 数据库概念 |
+| 07章 | 3-5天 | ⭐⭐ | API使用 |
+| 08章 | 5-7天 | ⭐⭐⭐ | 文件操作 |
+| 09章 | 7-10天 | ⭐⭐⭐⭐ | UI设计概念 |
+| 10章 | 5-7天 | ⭐⭐⭐ | 权限概念 |
+| 11章 | 7-10天 | ⭐⭐⭐⭐ | 编程经验 |
+| 12章 | 5-7天 | ⭐⭐⭐⭐⭐ | 系统知识 |
 
 **总计学习时间：2-3个月（每天2-3小时）**
 

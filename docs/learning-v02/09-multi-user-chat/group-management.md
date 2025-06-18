@@ -733,8 +733,172 @@ if __name__ == "__main__":
     demo_group_management()
 ```
 
-现在继续创建消息路由文档：
+## 🔧 群组高级功能
 
-<function_calls>
-<invoke name="str-replace-editor">
-<parameter name="command">str_replace
+### 群组权限管理
+
+```python
+# 群组权限管理扩展
+class AdvancedGroupManager(GroupManager):
+    """高级群组管理器"""
+
+    def set_member_role(self, operator_id: int, group_id: int,
+                       target_user_id: int, new_role: GroupRole) -> Tuple[bool, str]:
+        """设置成员角色"""
+        # 检查操作权限
+        if not self.has_permission(operator_id, group_id, GroupPermission.MANAGE_ADMIN):
+            return False, "您没有权限管理成员角色"
+
+        # 检查角色层级
+        operator_role = self.get_member_role(group_id, operator_id)
+        if not self._can_operate_on_role(operator_role, new_role):
+            return False, "权限不足，无法设置该角色"
+
+        try:
+            cursor = self.db.cursor()
+            cursor.execute(
+                "UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?",
+                (new_role.value, group_id, target_user_id)
+            )
+
+            self.db.commit()
+
+            # 更新内存缓存
+            if group_id in self.group_members and target_user_id in self.group_members[group_id]:
+                self.group_members[group_id][target_user_id].role = new_role
+
+            return True, f"成功设置用户角色为 {new_role.value}"
+
+        except Exception as e:
+            print(f"设置成员角色失败: {e}")
+            self.db.rollback()
+            return False, "设置角色失败，请稍后重试"
+
+    def transfer_ownership(self, current_owner_id: int, group_id: int,
+                          new_owner_id: int) -> Tuple[bool, str]:
+        """转让群主"""
+        # 验证当前用户是群主
+        if not self.has_permission(current_owner_id, group_id, GroupPermission.DISSOLVE_GROUP):
+            return False, "只有群主可以转让群组"
+
+        # 验证新群主是群组成员
+        if not self.is_member(new_owner_id, group_id):
+            return False, "新群主必须是群组成员"
+
+        try:
+            cursor = self.db.cursor()
+
+            # 更新群组所有者
+            cursor.execute(
+                "UPDATE chat_groups SET owner_id = ? WHERE group_id = ?",
+                (new_owner_id, group_id)
+            )
+
+            # 更新成员角色
+            cursor.execute(
+                "UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?",
+                (GroupRole.OWNER.value, group_id, new_owner_id)
+            )
+
+            cursor.execute(
+                "UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?",
+                (GroupRole.ADMIN.value, group_id, current_owner_id)
+            )
+
+            self.db.commit()
+
+            # 更新内存缓存
+            if group_id in self.groups:
+                self.groups[group_id].owner_id = new_owner_id
+
+            if group_id in self.group_members:
+                if new_owner_id in self.group_members[group_id]:
+                    self.group_members[group_id][new_owner_id].role = GroupRole.OWNER
+                if current_owner_id in self.group_members[group_id]:
+                    self.group_members[group_id][current_owner_id].role = GroupRole.ADMIN
+
+            return True, "群主转让成功"
+
+        except Exception as e:
+            print(f"转让群主失败: {e}")
+            self.db.rollback()
+            return False, "转让群主失败，请稍后重试"
+```
+
+### 群组统计和分析
+
+```mermaid
+graph TD
+    subgraph "群组数据分析"
+        A[活跃度分析<br/>Activity Analysis] --> A1[消息统计<br/>Message Stats]
+        A --> A2[用户活跃度<br/>User Activity]
+        A --> A3[时间分布<br/>Time Distribution]
+
+        B[成员分析<br/>Member Analysis] --> B1[成员增长<br/>Member Growth]
+        B --> B2[角色分布<br/>Role Distribution]
+        B --> B3[在线状态<br/>Online Status]
+
+        C[内容分析<br/>Content Analysis] --> C1[消息类型<br/>Message Types]
+        C --> C2[关键词统计<br/>Keyword Stats]
+        C --> C3[文件分享<br/>File Sharing]
+    end
+
+    style A fill:#e8f5e8
+    style B fill:#fff3cd
+    style C fill:#f8d7da
+```
+
+## 📊 群组管理最佳实践
+
+### 群组生命周期管理
+
+1. **创建阶段**
+   - 明确群组目的和规则
+   - 设置合适的成员上限
+   - 配置初始权限设置
+
+2. **成长阶段**
+   - 积极邀请相关用户
+   - 建立群组文化和规范
+   - 定期组织群组活动
+
+3. **维护阶段**
+   - 管理不活跃成员
+   - 处理违规行为
+   - 更新群组信息
+
+4. **归档阶段**
+   - 保存重要历史记录
+   - 通知成员群组状态变更
+   - 清理相关数据
+
+### 权限设计原则
+
+- **最小权限原则**：用户只获得完成任务所需的最小权限
+- **权限分离**：不同功能的权限独立管理
+- **审计追踪**：记录所有权限变更操作
+- **定期审查**：定期检查和更新权限设置
+
+## 📋 学习检查清单
+
+完成本节学习后，请确认您能够：
+
+- [ ] 理解群组管理系统的架构设计
+- [ ] 实现群组的创建、加入、退出功能
+- [ ] 设计群组权限和角色管理
+- [ ] 处理群组成员的管理操作
+- [ ] 实现群组信息的维护和更新
+- [ ] 设计群组数据的缓存策略
+- [ ] 处理群组操作中的异常情况
+- [ ] 分析群组的使用数据和统计
+
+## 🚀 下一步
+
+完成群组管理学习后，请继续学习：
+- [状态管理](state-management.md) - 系统状态维护
+- [用户连接池](user-connection-pool.md) - 连接管理
+- [第6章：数据库集成](../06-database-integration/README.md)
+
+---
+
+**完善的群组管理是多人聊天系统的重要组成部分，为用户提供良好的协作体验！** 👥
