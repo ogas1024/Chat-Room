@@ -267,6 +267,8 @@ config.json
 .env.local
 .env.production
 .env.development
+config/client_config.yaml
+config/server_config.yaml
 
 # 用户上传的文件
 uploads/

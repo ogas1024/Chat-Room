@@ -15,8 +15,11 @@ class AIConfig:
         """初始化AI配置"""
         # 获取服务器配置
         self.server_config = get_server_config()
+        # 加载配置属性
+        self._load_config()
 
-        # 从配置文件获取AI配置
+    def _load_config(self):
+        """从配置文件加载AI设置"""
         ai_config = self.server_config.get_ai_config()
 
         # 设置属性（保持向后兼容）
@@ -33,7 +36,7 @@ class AIConfig:
         self.trigger_keywords = ai_config.get("trigger_keywords",
             ["ai", "人工智能", "助手", "机器人", "智能", "问答"])
         self.require_at_mention = ai_config.get("require_at_mention", False)
-        
+
     def is_enabled(self) -> bool:
         """检查AI功能是否可用"""
         return self.server_config.is_ai_enabled()
@@ -92,20 +95,7 @@ class AIConfig:
 
     def reload_from_config(self):
         """从配置文件重新加载设置"""
-        ai_config = self.server_config.get_ai_config()
-        self.api_key = ai_config.get("api_key", "")
-        self.model = ai_config.get("model", "glm-4-flash")
-        self.max_tokens = ai_config.get("max_tokens", 1024)
-        self.temperature = ai_config.get("temperature", 0.7)
-        self.top_p = ai_config.get("top_p", 0.9)
-        self.max_context_length = ai_config.get("max_context_length", 10)
-        self.context_timeout = ai_config.get("context_timeout", 3600)
-        self.enable_group_chat = ai_config.get("enable_group_chat", True)
-        self.enable_private_chat = ai_config.get("enable_private_chat", True)
-        self.auto_reply = ai_config.get("auto_reply", True)
-        self.trigger_keywords = ai_config.get("trigger_keywords",
-            ["ai", "人工智能", "助手", "机器人", "智能", "问答"])
-        self.require_at_mention = ai_config.get("require_at_mention", False)
+        self._load_config()
 
 
 # 全局配置实例
