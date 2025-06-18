@@ -10,44 +10,45 @@ Chat-Room集成了智谱AI的GLM-4-Flash模型，为用户提供智能对话功�
 
 ```mermaid
 graph TB
-    subgraph "用户交互层"
+
+    subgraph 用户交互层
         USER[用户输入]
-        GROUP_CHAT[群聊@AI]
+        GROUP_CHAT["群聊@AI"]
         PRIVATE_CHAT[私聊AI]
         KEYWORDS[关键词触发]
     end
-    
-    subgraph "AI处理层"
+
+    subgraph AI处理层
         AI_HANDLER[AI处理器<br/>AIHandler]
         TRIGGER[触发判断器<br/>TriggerDetector]
         CONTEXT[上下文管理器<br/>ContextManager]
     end
-    
-    subgraph "智谱AI服务"
+
+    subgraph 智谱AI服务
         API[智谱AI API<br/>GLM-4-Flash]
         MODEL[语言模型]
     end
-    
-    subgraph "数据存储层"
+
+    subgraph 数据存储层
         CONTEXT_DB[上下文存储<br/>SQLite]
         CONFIG[AI配置<br/>YAML]
     end
-    
+
     USER --> GROUP_CHAT
     USER --> PRIVATE_CHAT
     USER --> KEYWORDS
-    
+
     GROUP_CHAT --> TRIGGER
     PRIVATE_CHAT --> AI_HANDLER
     KEYWORDS --> TRIGGER
-    
+
     TRIGGER --> AI_HANDLER
     AI_HANDLER --> CONTEXT
     AI_HANDLER --> API
-    
+
     API --> MODEL
     MODEL --> API
-    
+
     CONTEXT --> CONTEXT_DB
     AI_HANDLER --> CONFIG
 ```

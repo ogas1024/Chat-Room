@@ -132,16 +132,10 @@ docs/learning-v02/
 │   ├── cicd-automation.md                         # 持续集成与部署
 │   └── deployment-strategies.md                   # TODO 部署策略
 ├── 17-advanced-project-practice/                # 高级项目实践
+│   ├── feature-optimization.md                    # 功能扩展和优化策略
 │   ├── feature-planning-analysis.md               # 功能扩展与规划
 │   ├── performance-bottleneck-identification.md   # 性能瓶颈定位
 │   └── troubleshooting-methodology.md             # 生产环境问题排查
-├── 18-advanced-project-practice/                # 进阶实战：上线后的演进
-│   ├── feature-optimization.md                    # TODO 功能扩展和优化策略
-│   ├── code-refactoring.md                        # TODO 代码重构和架构演进
-│   ├── tuning-case.md                             # TODO 性能调优实战案例
-│   ├── troubleshooting-production.md              # TODO 生产环境问题排查
-│   ├── user-feedback.md                           # TODO 用户反馈处理和迭代
-│   └── contributing-guide.md                      # TODO 开源项目贡献指南
 └── appendix/                                   # 附录资源
     ├── code-examples/                             # 代码示例库
     ├── exercises/                                 # 练习题库
@@ -315,17 +309,10 @@ docs/learning-v02/
 - [部署策略](16-optimization-deployment/deployment-strategies.md) - 待完成
 
 ### [第17章：高级项目实践](17-advanced-project-practice/README.md)
+- [功能扩展和优化策略](17-advanced-project-practice/feature-optimization.md)
 - [功能扩展与规划](17-advanced-project-practice/feature-planning-analysis.md)
 - [性能瓶颈定位](17-advanced-project-practice/performance-bottleneck-identification.md)
 - [生产环境问题排查](17-advanced-project-practice/troubleshooting-methodology.md)
-
-### [第18章：进阶实战项目](18-advanced-project-practice/README.md)
-- [功能扩展和优化策略](18-advanced-project-practice/feature-optimization.md) - 待完成
-- [代码重构和架构演进](18-advanced-project-practice/code-refactoring.md) - 待完成
-- [性能调优实战案例](18-advanced-project-practice/tuning-case.md) - 待完成
-- [生产环境问题排查](18-advanced-project-practice/troubleshooting-production.md) - 待完成
-- [用户反馈处理和迭代](18-advanced-project-practice/user-feedback.md) - 待完成
-- [开源项目贡献指南](18-advanced-project-practice/contributing-guide.md) - 待完成
 
 ### [附录资源](appendix/README.md)
 - [代码示例库](appendix/code-examples/) - 完整代码示例
@@ -357,7 +344,6 @@ docs/learning-v02/
 | [第15章：测试开发](15-testing-quality/README.md) | ⬜ 未开始 | - | - |
 | [第16章：优化部署](16-optimization-deployment/README.md) | ⬜ 未开始 | - | - |
 | [第17章：高级实践](17-advanced-project-practice/README.md) | ⬜ 未开始 | - | - |
-| [第18章：进阶实战](18-advanced-project-practice/README.md) | ⬜ 未开始 | - | - |
 
 **状态说明：**
 - ⬜ 未开始
