@@ -1,39 +1,62 @@
 {
   "name": "chat-room",
-  "version": "1.0.0",
-  "description": "一个基于Python的实时聊天室系统，采用客户端-服务器架构，支持多用户聊天、文件传输、AI集成等功能",
+  "version": "2.0.0",
+  "description": "一个专为编程学习设计的完整Socket网络编程教学项目，包含17章节77个详细文档的渐进式学习路径，通过构建功能完整的聊天室系统掌握Python网络编程、数据库设计、AI集成等现代软件开发技能",
   "main": "main.py",
   "scripts": {
     "start": "python main.py",
-    "server": "python main.py server",
-    "client": "python main.py client",
+    "server": "python -m server.main",
+    "client": "python -m client.main",
+    "server-debug": "python -m server.main --debug",
+    "client-debug": "python -m client.main --debug",
     "demo": "python main.py demo",
-    "test": "python main.py test",
-    "config": "python main.py config",
+    "test": "python test/run_tests.py all",
+    "test-unit": "python test/run_tests.py unit",
+    "test-integration": "python test/run_tests.py integration",
+    "test-coverage": "python test/run_tests.py coverage",
     "install": "pip install -r requirements.txt",
-    "lint": "flake8 src test",
-    "format": "black src test",
-    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true"
+    "install-dev": "pip install -r requirements.txt && pip install -r test/requirements-minimal.txt",
+    "lint": "flake8 client server shared test",
+    "format": "black client server shared test",
+    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true",
+    "docs": "cd docs/learning-v02 && python -m http.server 8080",
+    "setup": "conda activate chatroom && pip install -r requirements.txt"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/ogas1024/Chat-Room.git"
   },
+  "homepage": "https://github.com/ogas1024/Chat-Room#readme",
+  "bugs": {
+    "url": "https://github.com/ogas1024/Chat-Room/issues"
+  },
   "keywords": [
-    "chat",
-    "chatroom",
     "socket",
+    "networking",
     "python",
+    "tutorial",
+    "learning",
+    "chat-room",
+    "education",
+    "teaching",
+    "programming",
+    "tcp-ip",
+    "client-server",
+    "multi-threading",
+    "database",
+    "sqlite",
     "tui",
     "textual",
     "ai",
     "real-time",
-    "messaging"
+    "messaging",
+    "beginner-friendly"
   ],
   "author": "Zhanhua Shu <2970143166zsbd@gmail.com>",
   "license": "MIT",
   "engines": {
-    "python": ">=3.8"
+    "python": ">=3.8",
+    "conda": ">=4.0"
   },
   "dependencies": {
     "textual": "^0.47.1",
@@ -53,21 +76,46 @@
     "flake8": "^6.1.0"
   },
   "directories": {
-    "src": "src",
+    "client": "client",
+    "server": "server",
+    "shared": "shared",
     "test": "test",
     "docs": "docs",
     "demo": "demo",
-    "config": "config"
+    "config": "config",
+    "tools": "tools",
+    "logs": "logs",
+    "archive": "archive"
   },
   "files": [
-    "src/",
+    "client/",
+    "server/",
+    "shared/",
     "test/",
     "docs/",
     "demo/",
     "config/",
+    "tools/",
     "main.py",
     "requirements.txt",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "educational": {
+    "type": "tutorial",
+    "level": "beginner-to-advanced",
+    "topics": [
+      "socket-programming",
+      "network-programming",
+      "python-development",
+      "database-design",
+      "ai-integration",
+      "tui-development",
+      "software-engineering"
+    ],
+    "learning-path": "docs/learning-v02/README.md",
+    "chapters": 17,
+    "documents": 77,
+    "estimated-time": "3-4 months"
+  }
 }
