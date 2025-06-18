@@ -616,4 +616,14 @@ class ChatClient:
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Requirements Analysis](requirements-analysis.md)
+
+➡️ **下一节：** [System Architecture](system-architecture.md)
+
+📚 **返回：** [第5章：项目入门](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **Socket编程是网络应用开发的基础！** 🔌

@@ -43,21 +43,21 @@ docs/learning-v02/
 │   ├── python-syntax-fundamentals.md              # Python语法基础
 │   ├── functions-modules.md                       # 函数和模块系统
 │   ├── object-oriented-programming.md             # 面向对象编程基础
-│   ├── exception-handling.md                      # TODO 异常处理基础
-│   ├── file-io.md                                 # TODO 文件操作和I/O
-│   └── builtin-libraries.md                       # TODO 常用内置库介绍
+│   ├── exception-handling.md                      # 异常处理基础
+│   ├── file-io.md                                 # 文件操作和I/O
+│   └── builtin-libraries.md                       # 常用内置库介绍
 ├── 02-development-environment/                  # 开发环境配置
 │   ├── python-installation.md                     # Python安装和版本管理
 │   ├── ide-configuration.md                       # IDE选择和配置
 │   ├── virtual-environments.md                    # 虚拟环境管理
-│   ├── package-management.md                      # TODO 包管理工具（pip/uvx）
+│   ├── package-management.md                      # 包管理工具（pip/uvx）
 │   ├── git-basics.md                              # Git版本控制基础
 │   └── debugging-tools.md                         # 调试工具和技巧
 ├── 03-computer-fundamentals/                    # 计算机基础
 │   ├── network-fundamentals.md                    # 网络基础原理（重点）
 │   ├── operating-systems.md                       # 操作系统基础
 │   ├── database-data-structures.md                # 数据结构和数据库基础
-│   ├── encoding-and-charset.md                    # TODO 编码和字符集
+│   ├── encoding-and-charset.md                    # 编码和字符集
 │   └── security-basics.md                         # TODO 安全基础概念
 ├── 04-software-engineering/                     # 软件工程
 │   ├── requirements-analysis.md                   # 项目需求分析和设计
@@ -192,10 +192,186 @@ docs/learning-v02/
 
 ## 🚀 快速开始
 
-1. **环境准备**：阅读 `00-preparation/environment-setup.md`
-2. **项目概览**：了解 `00-preparation/project-overview.md`
-3. **学习方法**：掌握 `00-preparation/learning-guide.md`
+1. **环境准备**：阅读 [环境搭建指南](00-overview/environment-setup.md)
+2. **项目概览**：了解 [项目整体介绍](00-overview/project-overview.md)
+3. **学习方法**：掌握 [学习方法指导](00-overview/learning-guide.md)
 4. **开始学习**：从第1章开始，按顺序学习
+
+## 📖 完整学习索引
+
+### [第0章：学习准备工作](00-overview/README.md)
+- [环境搭建](00-overview/environment-setup.md) - 开发环境配置
+- [项目概览](00-overview/project-overview.md) - 项目整体介绍
+- [学习方法](00-overview/learning-guide.md) - 学习方法指导
+
+### [第1章：Python编程基础](01-python-basics/README.md)
+- [Python语法基础](01-python-basics/syntax-fundamentals.md) - 语言基础语法
+- [数据结构](01-python-basics/data-structures.md) - 列表、字典等数据结构
+- [函数和模块](01-python-basics/functions-modules.md) - 函数定义和模块组织
+- [面向对象编程](01-python-basics/oop-basics.md) - 类和对象基础
+- [异常处理基础](01-python-basics/exception-handling.md) - 错误处理机制
+- [文件操作和I/O](01-python-basics/file-io.md) - 文件读写操作
+- [常用内置库](01-python-basics/builtin-libraries.md) - Python标准库介绍
+
+### [第2章：开发环境配置](02-development-environment/README.md)
+- [Python安装和版本管理](02-development-environment/python-installation.md)
+- [IDE选择和配置](02-development-environment/ide-configuration.md)
+- [虚拟环境管理](02-development-environment/virtual-environments.md)
+- [包管理工具](02-development-environment/package-management.md) - pip/uv等工具
+- [Git版本控制基础](02-development-environment/git-basics.md)
+- [调试工具和技巧](02-development-environment/debugging-tools.md)
+
+### [第3章：计算机基础知识](03-computer-fundamentals/README.md)
+- [网络基础原理](03-computer-fundamentals/network-fundamentals.md) - 重点学习
+- [操作系统基础](03-computer-fundamentals/operating-systems.md)
+- [数据结构和数据库基础](03-computer-fundamentals/database-data-structures.md)
+- [编码和字符集](03-computer-fundamentals/encoding-and-charset.md) - 字符编码处理
+- [安全基础概念](03-computer-fundamentals/security-basics.md) - 信息安全基础
+
+### [第4章：软件工程基础](04-software-engineering/README.md)
+- [项目需求分析和设计](04-software-engineering/requirements-analysis.md)
+- [最简单的Socket通信实现](04-software-engineering/socket-basics.md)
+- [客户端-服务器架构](04-software-engineering/system-architecture.md)
+- [消息收发功能](04-software-engineering/message-protocol.md)
+- [错误处理](04-software-engineering/error-handling.md)
+- [项目结构组织](04-software-engineering/project-organization.md)
+
+### [第5章：Chat-Room项目入门](05-chatroom-basics/README.md)
+- [项目需求分析和设计](05-chatroom-basics/requirements-analysis.md)
+- [最简单的Socket通信实现](05-chatroom-basics/socket-basic-demo.md)
+- [基础客户端-服务器架构](05-chatroom-basics/basic-architecture.md)
+- [简单的消息收发功能](05-chatroom-basics/message-exchange.md)
+- [基础的错误处理](05-chatroom-basics/basic-error-handling.md)
+- [项目结构组织](05-chatroom-basics/structure-overview.md)
+
+### [第6章：Socket网络编程](06-socket-programming/README.md)
+- [网络编程概念](06-socket-programming/network-concepts.md)
+- [TCP协议基础](06-socket-programming/tcp-basics.md)
+- [Socket API详解](06-socket-programming/socket-api.md)
+- [简单客户端-服务器](06-socket-programming/simple-client-server.md)
+
+### [第7章：简单聊天室](07-simple-chat/README.md)
+- [通信协议设计](07-simple-chat/protocol-design.md)
+- [消息处理机制](07-simple-chat/message-handling.md)
+- [多线程编程基础](07-simple-chat/threading-basics.md)
+- [错误处理策略](07-simple-chat/error-handling.md)
+
+### [第8章：数据库与用户系统](08-database-user-system/README.md)
+- [SQLite数据库基础](08-database-user-system/sqlite-basics.md)
+- [数据库设计原理](08-database-user-system/database-design.md)
+- [用户认证系统](08-database-user-system/user-authentication.md)
+- [数据模型设计](08-database-user-system/data-models.md)
+
+### [第9章：多人聊天系统](09-multi-user-chat/README.md)
+- [聊天组管理](09-multi-user-chat/group-management.md)
+- [消息路由机制](09-multi-user-chat/message-routing.md)
+- [并发处理](09-multi-user-chat/concurrent-handling.md)
+- [状态管理](09-multi-user-chat/state-management.md)
+- [用户连接池](09-multi-user-chat/user-connection-pool.md)
+
+### [第10章：文件传输功能](10-file-transfer/README.md)
+- [文件传输协议](10-file-transfer/file-protocol.md)
+- [分块传输技术](10-file-transfer/chunked-transfer.md)
+- [进度跟踪](10-file-transfer/progress-tracking.md)
+- [安全验证](10-file-transfer/security-validation.md)
+
+### [第11章：AI智能助手集成](11-ai-integration/README.md)
+- [API集成基础](11-ai-integration/api-integration.md)
+- [GLM-4-Flash使用](11-ai-integration/glm-4-flash-features.md)
+- [上下文管理](11-ai-integration/context-management.md)
+- [异步处理](11-ai-integration/async-processing.md)
+
+### [第12章：用户界面设计](12-user-interface/README.md)
+- [TUI界面概念](12-user-interface/tui-concepts.md)
+- [Textual框架](12-user-interface/textual-framework.md)
+- [组件化设计](12-user-interface/component-design.md)
+- [主题系统](12-user-interface/theme-system.md)
+
+### [第13章：管理员系统](13-admin-system/README.md)
+- [权限模型设计](13-admin-system/permission-model.md)
+- [命令系统](13-admin-system/command-system.md)
+- [CRUD操作](13-admin-system/crud-operations.md)
+- [安全措施](13-admin-system/security-measures.md)
+
+### [第14章：日志与错误处理](14-logging-error-handling/README.md)
+- [Loguru日志系统](14-logging-error-handling/loguru-system.md)
+- [错误处理策略](14-logging-error-handling/error-strategies.md)
+- [调试技巧](14-logging-error-handling/debugging-techniques.md)
+- [监控与诊断](14-logging-error-handling/monitoring-diagnostics.md)
+
+### [第15章：测试驱动开发](15-testing-quality/README.md)
+- [TDD实践](15-testing-quality/tdd-practices.md)
+- [pytest框架](15-testing-quality/pytest-framework.md)
+- [单元测试](15-testing-quality/unit-testing.md)
+- [集成测试](15-testing-quality/integration-testing.md)
+- [测试覆盖率](15-testing-quality/test-coverage.md)
+- [Mock测试](15-testing-quality/mock-testing.md) - 待完成
+
+### [第16章：优化与部署](16-optimization-deployment/README.md)
+- [性能调优](16-optimization-deployment/performance-optimization.md)
+- [监控运维](16-optimization-deployment/monitoring-operations.md)
+- [容器部署](16-optimization-deployment/containerization-deployment.md)
+- [持续集成与部署](16-optimization-deployment/cicd-automation.md)
+- [部署策略](16-optimization-deployment/deployment-strategies.md) - 待完成
+
+### [第17章：高级项目实践](17-advanced-project-practice/README.md)
+- [功能扩展与规划](17-advanced-project-practice/feature-planning-analysis.md)
+- [性能瓶颈定位](17-advanced-project-practice/performance-bottleneck-identification.md)
+- [生产环境问题排查](17-advanced-project-practice/troubleshooting-methodology.md)
+
+### [第18章：进阶实战项目](18-advanced-project-practice/README.md)
+- [功能扩展和优化策略](18-advanced-project-practice/feature-optimization.md) - 待完成
+- [代码重构和架构演进](18-advanced-project-practice/code-refactoring.md) - 待完成
+- [性能调优实战案例](18-advanced-project-practice/tuning-case.md) - 待完成
+- [生产环境问题排查](18-advanced-project-practice/troubleshooting-production.md) - 待完成
+- [用户反馈处理和迭代](18-advanced-project-practice/user-feedback.md) - 待完成
+- [开源项目贡献指南](18-advanced-project-practice/contributing-guide.md) - 待完成
+
+### [附录资源](appendix/README.md)
+- [代码示例库](appendix/code-examples/) - 完整代码示例
+- [练习题库](appendix/exercises/) - 配套练习题
+- [故障排除指南](appendix/troubleshooting.md) - 常见问题解决
+- [学习资源推荐](appendix/resources.md) - 扩展学习资料
+
+## 📊 学习进度跟踪
+
+### 章节完成情况
+
+| 章节 | 状态 | 完成时间 | 学习笔记 |
+|------|------|----------|----------|
+| [第0章：学习准备](00-overview/README.md) | ⬜ 未开始 | - | - |
+| [第1章：Python基础](01-python-basics/README.md) | ⬜ 未开始 | - | - |
+| [第2章：开发环境](02-development-environment/README.md) | ⬜ 未开始 | - | - |
+| [第3章：计算机基础](03-computer-fundamentals/README.md) | ⬜ 未开始 | - | - |
+| [第4章：软件工程](04-software-engineering/README.md) | ⬜ 未开始 | - | - |
+| [第5章：项目入门](05-chatroom-basics/README.md) | ⬜ 未开始 | - | - |
+| [第6章：网络编程](06-socket-programming/README.md) | ⬜ 未开始 | - | - |
+| [第7章：简单聊天](07-simple-chat/README.md) | ⬜ 未开始 | - | - |
+| [第8章：数据库系统](08-database-user-system/README.md) | ⬜ 未开始 | - | - |
+| [第9章：多人聊天](09-multi-user-chat/README.md) | ⬜ 未开始 | - | - |
+| [第10章：文件传输](10-file-transfer/README.md) | ⬜ 未开始 | - | - |
+| [第11章：AI集成](11-ai-integration/README.md) | ⬜ 未开始 | - | - |
+| [第12章：用户界面](12-user-interface/README.md) | ⬜ 未开始 | - | - |
+| [第13章：管理员系统](13-admin-system/README.md) | ⬜ 未开始 | - | - |
+| [第14章：日志处理](14-logging-error-handling/README.md) | ⬜ 未开始 | - | - |
+| [第15章：测试开发](15-testing-quality/README.md) | ⬜ 未开始 | - | - |
+| [第16章：优化部署](16-optimization-deployment/README.md) | ⬜ 未开始 | - | - |
+| [第17章：高级实践](17-advanced-project-practice/README.md) | ⬜ 未开始 | - | - |
+| [第18章：进阶实战](18-advanced-project-practice/README.md) | ⬜ 未开始 | - | - |
+
+**状态说明：**
+- ⬜ 未开始
+- 🔄 进行中
+- ✅ 已完成
+- ⚠️ 需要复习
+
+### 学习统计
+
+- **总章节数：** 19章
+- **已完成：** 0章 (0%)
+- **进行中：** 0章
+- **预计总时间：** 120-150小时
+- **实际用时：** 0小时
 
 ## 📋 学习检查清单
 
@@ -206,6 +382,7 @@ docs/learning-v02/
 - [ ] 完成章节练习题
 - [ ] 能够解释设计思路
 - [ ] 可以独立实现类似功能
+- [ ] 更新学习进度表格
 
 ## 🤝 学习支持
 

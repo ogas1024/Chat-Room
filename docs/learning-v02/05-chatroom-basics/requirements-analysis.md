@@ -462,4 +462,12 @@ class AcceptanceCriteria:
 
 ---
 
+
+## 📖 导航
+
+➡️ **下一节：** [Socket Basics](socket-basics.md)
+
+📚 **返回：** [第5章：项目入门](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **良好的需求分析是项目成功的基础！** 📋

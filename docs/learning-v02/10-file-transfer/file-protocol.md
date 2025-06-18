@@ -446,3 +446,11 @@ def demo_file_protocol():
 if __name__ == "__main__":
     demo_file_protocol()
 ```
+
+## 📖 导航
+
+➡️ **下一节：** [Chunked Transfer](chunked-transfer.md)
+
+📚 **返回：** [第10章：文件传输](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)

@@ -768,4 +768,14 @@ git branch -d feature/message-routing
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Package Management](package-management.md)
+
+➡️ **下一节：** [Debugging Tools](debugging-tools.md)
+
+📚 **返回：** [第2章：开发环境](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **Git是现代软件开发的必备技能，熟练掌握它将大大提高你的开发效率！** 🌟

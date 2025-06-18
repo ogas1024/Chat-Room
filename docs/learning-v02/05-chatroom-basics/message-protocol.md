@@ -666,4 +666,12 @@ if __name__ == "__main__":
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [System Architecture](system-architecture.md)
+
+📚 **返回：** [第5章：项目入门](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **良好的消息协议是可靠通信的基础！** 📡

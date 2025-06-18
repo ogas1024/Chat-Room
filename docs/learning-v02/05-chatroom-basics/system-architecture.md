@@ -649,4 +649,14 @@ class PerformanceArchitecture:
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Socket Basics](socket-basics.md)
+
+➡️ **下一节：** [Message Protocol](message-protocol.md)
+
+📚 **返回：** [第5章：项目入门](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **良好的架构设计是系统成功的关键！** 🏗️

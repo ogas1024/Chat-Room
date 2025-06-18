@@ -735,4 +735,14 @@ class AutomatedOperationsSystem:
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Performance Optimization](performance-optimization.md)
+
+➡️ **下一节：** [Containerization Deployment](containerization-deployment.md)
+
+📚 **返回：** [第16章：优化部署](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **感谢您的学习！祝您在技术道路上不断进步！** 🎉

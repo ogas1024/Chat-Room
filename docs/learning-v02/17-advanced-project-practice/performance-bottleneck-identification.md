@@ -554,3 +554,13 @@ def demonstrate_performance_monitoring():
 if __name__ == "__main__":
     demonstrate_performance_monitoring()
 ```
+
+## 📖 导航
+
+⬅️ **上一节：** [Feature Planning Analysis](feature-planning-analysis.md)
+
+➡️ **下一节：** [Troubleshooting Methodology](troubleshooting-methodology.md)
+
+📚 **返回：** [第17章：高级实践](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)

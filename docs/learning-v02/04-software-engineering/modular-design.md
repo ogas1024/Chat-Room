@@ -646,4 +646,14 @@ event_bus.publish(EventType.USER_LOGIN, {"username": "test_user"})
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Project Organization](project-organization.md)
+
+➡️ **下一节：** [Pep8 Standards](pep8-standards.md)
+
+📚 **返回：** [第4章：软件工程](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **模块化设计让代码更清晰、更易维护！** 🧩

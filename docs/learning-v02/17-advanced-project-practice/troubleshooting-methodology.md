@@ -730,4 +730,12 @@ COMMON_ISSUES = {
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Performance Bottleneck Identification](performance-bottleneck-identification.md)
+
+📚 **返回：** [第17章：高级实践](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **系统性的故障排查能力是高级工程师的核心技能！** 🔧

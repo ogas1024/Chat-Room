@@ -435,6 +435,16 @@ class ThreadPoolExecutor:
             callback: 成功回调
             error_callback: 错误回调
             timeout: 超时时间
+
+## 📖 导航
+
+⬅️ **上一节：** [Message Routing](message-routing.md)
+
+➡️ **下一节：** [State Management](state-management.md)
+
+📚 **返回：** [第9章：多人聊天](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
             **kwargs: 函数关键字参数
 
         Returns:

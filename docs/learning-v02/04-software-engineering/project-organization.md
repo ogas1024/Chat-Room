@@ -516,4 +516,12 @@ class ConfigManager:
 
 ---
 
+
+## 📖 导航
+
+➡️ **下一节：** [Modular Design](modular-design.md)
+
+📚 **返回：** [第4章：软件工程](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **良好的项目组织是成功的基础！** 🏗️

@@ -562,4 +562,14 @@ directory = htmlcov
 
 ---
 
+
+## 📖 导航
+
+⬅️ **上一节：** [Tdd Practices](tdd-practices.md)
+
+➡️ **下一节：** [Unit Testing](unit-testing.md)
+
+📚 **返回：** [第15章：测试开发](README.md)
+
+🏠 **主页：** [学习路径总览](../README.md)
 **Pytest是Python生态中最强大的测试框架，掌握它将大大提高你的测试效率！** 🧪
