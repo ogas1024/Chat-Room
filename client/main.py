@@ -4,6 +4,7 @@
 """
 
 import sys
+import signal
 
 from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
@@ -68,6 +69,41 @@ class SimpleChatClient:
             'is_current_chat_banned': False,
             'current_chat_group_name': ''
         }
+
+        # 设置信号处理器
+        self._setup_signal_handlers()
+
+    def _setup_signal_handlers(self):
+        """设置信号处理器"""
+        def signal_handler(signum, frame):
+            """处理Ctrl+C信号"""
+            print("\n收到中断信号，正在安全退出...")
+
+            # 如果已登录，发送logout请求
+            if self.current_state == "logged_in" and self.chat_client.is_logged_in():
+                try:
+                    success = self.chat_client.logout()
+                    if success:
+                        print("✅ 已成功登出")
+                    else:
+                        print("⚠️ 登出请求发送失败，但仍会断开连接")
+                except Exception as e:
+                    logger = get_logger("client.main")
+                    logger.warning("信号处理中发送登出请求时出错", error=str(e))
+                    print("⚠️ 登出请求发送失败，但仍会断开连接")
+
+            # 设置退出标志
+            self.running = False
+
+            # 清理资源
+            self.cleanup()
+
+            # 退出程序
+            sys.exit(0)
+
+        # 注册信号处理器
+        signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+        signal.signal(signal.SIGTERM, signal_handler)  # 终止信号
 
     def _setup_simple_message_handlers(self):
         """设置Simple模式的消息处理器"""
@@ -331,7 +367,7 @@ class SimpleChatClient:
     
     def connect_to_server(self) -> bool:
         """连接到服务器"""
-        print(f"正在连接服务器 {self.chat_client.network_client.host}:{self.chat_client.network_client.port}...")
+        # print(f"正在连接服务器 {self.chat_client.network_client.host}:{self.chat_client.network_client.port}...")
 
         if self.chat_client.connect():
             print("✅ 连接服务器成功")
@@ -371,10 +407,14 @@ class SimpleChatClient:
                     self.handle_input(user_input)
                     
                 except KeyboardInterrupt:
+                    # 信号处理器会处理Ctrl+C，这里不需要额外处理
+                    # 但为了防止信号处理器未正确设置，我们仍然提供备用处理
                     print("\n用户中断，正在退出...")
+                    self.handle_exit_command()
                     break
                 except EOFError:
                     print("\n输入结束，正在退出...")
+                    self.handle_exit_command()
                     break
                     
         finally:
@@ -396,7 +436,7 @@ class SimpleChatClient:
         elif command_input == "/signin":
             self.handle_signin_command()
         elif command_input == "/exit":
-            self.running = False
+            self.handle_exit_command()
         else:
             # 使用命令处理器
             success, message = self.command_handler.handle_command(command_input)
@@ -472,6 +512,26 @@ class SimpleChatClient:
             logger = get_logger("client.main")
             logger.error("注册时出错", username=username, error=str(e), exc_info=True)
             print(f"❌ 注册时出错: {e}")
+
+    def handle_exit_command(self):
+        """处理退出命令"""
+        print("正在退出...")
+
+        # 如果已登录，发送logout请求
+        if self.current_state == "logged_in" and self.chat_client.is_logged_in():
+            try:
+                success = self.chat_client.logout()
+                if success:
+                    print("✅ 已成功登出")
+                else:
+                    print("⚠️ 登出请求发送失败，但仍会断开连接")
+            except Exception as e:
+                logger = get_logger("client.main")
+                logger.warning("发送登出请求时出错", error=str(e))
+                print("⚠️ 登出请求发送失败，但仍会断开连接")
+
+        # 设置退出标志
+        self.running = False
     
     def handle_message(self, message: str):
         """处理普通消息"""

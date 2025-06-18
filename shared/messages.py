@@ -80,6 +80,12 @@ class RegisterResponse(BaseMessage):
 
 
 @dataclass
+class LogoutRequest(BaseMessage):
+    """登出请求消息"""
+    message_type: str = MessageType.LOGOUT_REQUEST
+
+
+@dataclass
 class ChatMessage(BaseMessage):
     """聊天消息"""
     message_type: str = MessageType.CHAT_MESSAGE

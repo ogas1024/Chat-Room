@@ -743,6 +743,17 @@ class CommandHandler:
 
     def handle_exit(self, command: Command) -> tuple[bool, str]:
         """处理退出命令"""
+        # 如果已登录，先发送logout请求
+        if self.chat_client.is_logged_in():
+            try:
+                success = self.chat_client.logout()
+                if not success:
+                    # 即使logout失败也继续断开连接
+                    pass
+            except Exception:
+                # 忽略logout过程中的异常，继续断开连接
+                pass
+
         # 断开连接
         if self.chat_client.is_connected():
             self.chat_client.disconnect()

@@ -103,13 +103,32 @@ class UserManager:
     def disconnect_user(self, client_socket: socket.socket):
         """断开用户连接（通过socket查找用户）"""
         user_id = None
-        for uid, sock in self.online_users.items():
-            if sock == client_socket:
-                user_id = uid
-                break
-        
+        username = None
+
+        # 先获取用户信息用于日志记录
+        user_info = self.get_user_by_socket(client_socket)
+        if user_info:
+            user_id = user_info['user_id']
+            username = user_info['username']
+        else:
+            # 如果通过get_user_by_socket找不到，尝试直接遍历
+            for uid, sock in self.online_users.items():
+                if sock == client_socket:
+                    user_id = uid
+                    # 尝试从session中获取用户名
+                    session = self.user_sessions.get(uid)
+                    username = session.get('username', 'Unknown') if session else 'Unknown'
+                    break
+
         if user_id:
+            # 记录用户断开连接的日志
+            self.logger.info("用户断开连接", user_id=user_id, username=username)
+
+            # 调用logout_user更新状态
             self.logout_user(user_id)
+        else:
+            # 没有找到对应的用户，可能是未登录的连接
+            self.logger.debug("断开未登录的客户端连接")
     
     def get_user_by_socket(self, client_socket: socket.socket) -> Optional[Dict]:
         """通过socket获取用户信息"""

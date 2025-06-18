@@ -691,14 +691,32 @@ class ChatRoomServer:
             # 获取用户信息
             user_info = self.user_manager.get_user_by_socket(client_socket)
             if user_info:
+                # 记录用户主动登出
+                self.logger.info("用户主动登出",
+                               user_id=user_info['user_id'],
+                               username=user_info['username'])
+                log_user_action(user_info['user_id'], user_info['username'], "logout")
+
+                # 执行登出操作
                 self.user_manager.logout_user(user_info['user_id'])
 
-            # 发送成功响应
-            response = SystemMessage(content="已成功登出")
-            self.send_message(client_socket, response)
+                # 发送成功响应
+                response = SystemMessage(content="已成功登出")
+                self.send_message(client_socket, response)
+            else:
+                # 用户未登录，但仍然发送成功响应
+                self.logger.debug("收到未登录用户的登出请求")
+                response = SystemMessage(content="已成功登出")
+                self.send_message(client_socket, response)
 
         except Exception as e:
             self.logger.error("登出处理错误", error=str(e), exc_info=True)
+            # 即使出错也尝试发送响应
+            try:
+                response = SystemMessage(content="登出处理完成")
+                self.send_message(client_socket, response)
+            except:
+                pass
 
     # 辅助方法
     def send_message(self, client_socket: socket.socket, message: BaseMessage):

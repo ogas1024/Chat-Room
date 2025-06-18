@@ -511,7 +511,29 @@ class ChatClient:
                 return False, response.error_message or "注册失败"
 
         return False, "服务器无响应"
-    
+
+    def logout(self) -> bool:
+        """用户登出"""
+        from shared.messages import LogoutRequest
+        from shared.constants import MessageType
+
+        if not self.is_logged_in():
+            return True  # 已经是登出状态
+
+        if not self.network_client.is_connected():
+            return False  # 无法发送登出请求
+
+        # 发送登出请求
+        logout_request = LogoutRequest()
+        success = self.network_client.send_message(logout_request)
+
+        # 无论是否发送成功，都清理本地状态
+        self.current_user = None
+        self.current_chat_group = None
+        self.user_id = None
+
+        return success
+
     def send_chat_message(self, content: str, group_id: int) -> bool:
         """发送聊天消息"""
         from shared.messages import ChatMessage
