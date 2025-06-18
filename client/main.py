@@ -7,7 +7,6 @@ import sys
 
 from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT
 from shared.logger import get_logger
 
 
@@ -37,9 +36,18 @@ def validate_connection_state(current_state: str, required_state: str) -> bool:
 
 class SimpleChatClient:
     """简单的聊天客户端"""
-    
-    def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+
+    def __init__(self, host: str = None, port: int = None):
         """初始化客户端"""
+        # 如果没有传入参数，从配置文件读取默认值
+        if host is None or port is None:
+            from client.config.client_config import get_client_config
+            client_config = get_client_config()
+            if host is None:
+                host = client_config.get_default_host()
+            if port is None:
+                port = client_config.get_default_port()
+
         self.chat_client = ChatClient(host, port)
         self.command_handler = CommandHandler(self.chat_client)
         # 设置Simple客户端的引用，以便命令处理器可以访问

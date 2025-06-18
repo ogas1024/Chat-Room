@@ -29,7 +29,7 @@ from client.core.client import ChatClient
 from client.commands.parser import CommandHandler
 from client.ui.themes import get_theme_manager, apply_theme_to_console
 from client.ui.components import EnhancedChatLog, StatusPanel, EnhancedInput, LoadingIndicator
-from shared.constants import DEFAULT_HOST, DEFAULT_PORT, DISPLAY_TIME_FORMAT
+from shared.constants import DISPLAY_TIME_FORMAT
 
 
 class ChatRoomApp(App):
@@ -105,9 +105,19 @@ class ChatRoomApp(App):
     current_chat = reactive("未连接")
     connection_status = reactive("断开连接")
     
-    def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+    def __init__(self, host: str = None, port: int = None):
         """初始化应用"""
         super().__init__()
+
+        # 如果没有传入参数，从配置文件读取默认值
+        if host is None or port is None:
+            from client.config.client_config import get_client_config
+            client_config = get_client_config()
+            if host is None:
+                host = client_config.get_default_host()
+            if port is None:
+                port = client_config.get_default_port()
+
         self.host = host
         self.port = port
         self.chat_client: Optional[ChatClient] = None
@@ -959,7 +969,7 @@ class ChatRoomApp(App):
         self.exit()
 
 
-def run_chat_app(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
+def run_chat_app(host: str = None, port: int = None):
     """运行聊天应用"""
     app = ChatRoomApp(host, port)
     app.run()
