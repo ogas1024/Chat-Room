@@ -507,18 +507,24 @@ def main():
     """主函数"""
     import argparse
 
+    # 首先获取配置文件中的默认值
+    from client.config.client_config import get_client_config
+    client_config = get_client_config()
+    config_host = client_config.get_default_host()
+    config_port = client_config.get_default_port()
+
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='聊天室客户端')
     parser.add_argument(
         '--host',
-        default=DEFAULT_HOST,
-        help=f'服务器地址 (默认: {DEFAULT_HOST})'
+        default=config_host,  # 使用配置文件中的默认值
+        help=f'服务器地址 (默认: {config_host})'
     )
     parser.add_argument(
         '--port',
         type=int,
-        default=DEFAULT_PORT,
-        help=f'服务器端口 (默认: {DEFAULT_PORT})'
+        default=config_port,  # 使用配置文件中的默认值
+        help=f'服务器端口 (默认: {config_port})'
     )
     parser.add_argument(
         '--mode',
@@ -536,10 +542,8 @@ def main():
 
     try:
         # 初始化客户端日志系统
-        from client.config.client_config import get_client_config
         from shared.logger import init_logger
 
-        client_config = get_client_config()
         logging_config = client_config.get_logging_config()
 
         # 如果启用调试模式，调整日志级别

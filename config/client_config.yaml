@@ -1,5 +1,5 @@
 connection:
-  default_host: localhost
+  default_host: 47.116.210.212
   default_port: 8888
   connection_timeout: 10
   reconnect_attempts: 3

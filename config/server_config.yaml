@@ -1,5 +1,5 @@
 server:
-  host: localhost
+  host: 0.0.0.0  # 监听所有网络接口，允许外部连接
   port: 8888
   max_connections: 100
   buffer_size: 4096
@@ -32,12 +32,13 @@ file_storage:
   - .js
   - .html
   - .css
+  - .md
   chunk_size: 8192
   auto_cleanup: true
   cleanup_interval: 86400
 ai:
   enabled: true
-  api_key: 324216afd1584a88b1a3b0d532b897eb.cm74bxxiHWhSsKZE
+  api_key: ad4315e0c7de4827ac702cef18b27d65.vr2kSgU9oQ3JkJrs
   model: glm-4-flash
   max_tokens: 1024
   temperature: 0.7
