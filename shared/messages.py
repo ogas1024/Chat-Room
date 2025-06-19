@@ -448,6 +448,7 @@ def create_message_from_dict(data: Dict[str, Any]) -> BaseMessage:
         MessageType.CHAT_MESSAGE: ChatMessage,
         MessageType.CHAT_HISTORY: ChatMessage,  # 历史消息也使用ChatMessage类
         MessageType.CHAT_HISTORY_COMPLETE: ChatHistoryComplete,  # 历史消息加载完成通知
+        MessageType.FILE_NOTIFICATION: ChatMessage,  # 文件通知消息也使用ChatMessage类
         MessageType.USER_INFO_REQUEST: UserInfoRequest,
         MessageType.USER_INFO_RESPONSE: UserInfoResponse,
         MessageType.LIST_USERS_REQUEST: ListUsersRequest,

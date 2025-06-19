@@ -121,6 +121,23 @@ def setup_config(_args):
 
 def main():
     """主函数"""
+    # 获取配置文件中的默认值
+    try:
+        from server.config.server_config import get_server_config
+        from client.config.client_config import get_client_config
+        server_config = get_server_config()
+        client_config = get_client_config()
+        default_server_host = server_config.get_server_host()
+        default_server_port = server_config.get_server_port()
+        default_client_host = client_config.get_default_host()
+        default_client_port = client_config.get_default_port()
+    except Exception:
+        # 如果配置文件加载失败，使用硬编码默认值
+        default_server_host = 'localhost'
+        default_server_port = 8888
+        default_client_host = 'localhost'
+        default_client_port = 8888
+
     parser = argparse.ArgumentParser(
         description='Chat-Room 聊天室项目统一入口',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -133,19 +150,19 @@ def main():
   %(prog)s config                    # 配置设置
         """
     )
-    
+
     subparsers = parser.add_subparsers(dest='command', help='可用命令')
-    
+
     # 服务器命令
     server_parser = subparsers.add_parser('server', help='启动服务器')
-    server_parser.add_argument('--host', default='localhost', help='服务器地址')
-    server_parser.add_argument('--port', type=int, default=8888, help='服务器端口')
+    server_parser.add_argument('--host', default=default_server_host, help=f'服务器地址 (默认: {default_server_host})')
+    server_parser.add_argument('--port', type=int, default=default_server_port, help=f'服务器端口 (默认: {default_server_port})')
     server_parser.add_argument('--debug', action='store_true', help='调试模式')
-    
+
     # 客户端命令
     client_parser = subparsers.add_parser('client', help='启动客户端')
-    client_parser.add_argument('--host', default='localhost', help='服务器地址')
-    client_parser.add_argument('--port', type=int, default=8888, help='服务器端口')
+    client_parser.add_argument('--host', default=default_client_host, help=f'服务器地址 (默认: {default_client_host})')
+    client_parser.add_argument('--port', type=int, default=default_client_port, help=f'服务器端口 (默认: {default_client_port})')
     client_parser.add_argument('--mode', choices=['tui', 'simple'], default='simple', help='客户端模式')
     
     # 演示命令

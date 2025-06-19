@@ -14,6 +14,7 @@ from shared.exceptions import (
     UserNotFoundError, DatabaseError
 )
 from shared.messages import UserInfo
+from shared.logger import get_logger
 
 
 class UserManager:
@@ -22,6 +23,7 @@ class UserManager:
     def __init__(self):
         """初始化用户管理器"""
         self.db = get_db()
+        self.logger = get_logger(__name__)
         # 在线用户连接映射 {user_id: socket}
         self.online_users: Dict[int, socket.socket] = {}
         # 用户会话信息 {user_id: user_info}

@@ -95,6 +95,13 @@ class ChatRoomServer:
             # 创建服务器socket
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # 添加更多socket选项来解决端口占用问题
+            try:
+                self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            except (AttributeError, OSError):
+                # SO_REUSEPORT 在某些系统上可能不可用
+                pass
+
             self.server_socket.bind((self.host, self.port))
             self.server_socket.listen(self.max_connections)
 
@@ -790,12 +797,31 @@ class ChatRoomServer:
             filename = message.filename
             file_size = message.file_size
 
+            # 记录文件上传请求开始
+            self.logger.info("收到文件上传请求",
+                           user_id=user_info['user_id'],
+                           username=user_info['username'],
+                           filename=filename,
+                           file_size=file_size,
+                           chat_group_id=chat_group_id)
+            log_file_operation("upload_request_start", filename,
+                             user_id=user_info['user_id'],
+                             username=user_info['username'],
+                             file_size=file_size)
+
             if not chat_group_id or not filename or not file_size:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "缺少必需的文件上传参数")
                 return
 
             # 验证文件大小
             if file_size > MAX_FILE_SIZE:
+                self.logger.warning("文件上传被拒绝：文件过大",
+                                  filename=filename,
+                                  file_size=file_size,
+                                  max_size=MAX_FILE_SIZE)
+                log_file_operation("upload_rejected_size", filename,
+                                 file_size=file_size,
+                                 max_size=MAX_FILE_SIZE)
                 self.send_error(client_socket, ErrorCode.FILE_TOO_LARGE,
                               f"文件过大，最大支持 {MAX_FILE_SIZE // (1024*1024)}MB")
                 return
@@ -803,12 +829,23 @@ class ChatRoomServer:
             # 验证文件扩展名
             file_ext = os.path.splitext(filename)[1].lower()
             if file_ext not in ALLOWED_FILE_EXTENSIONS:
+                self.logger.warning("文件上传被拒绝：不支持的文件类型",
+                                  filename=filename,
+                                  file_ext=file_ext)
+                log_file_operation("upload_rejected_type", filename,
+                                 file_ext=file_ext)
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND,
                               f"不支持的文件类型: {file_ext}")
                 return
 
             # 验证用户是否在聊天组中
             if not self.chat_manager.db.is_user_in_chat_group(chat_group_id, user_info['user_id']):
+                self.logger.warning("文件上传被拒绝：用户不在聊天组中",
+                                  user_id=user_info['user_id'],
+                                  chat_group_id=chat_group_id)
+                log_file_operation("upload_rejected_permission", filename,
+                                 user_id=user_info['user_id'],
+                                 chat_group_id=chat_group_id)
                 self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您不在此聊天组中")
                 return
 
@@ -818,6 +855,13 @@ class ChatRoomServer:
 
             # 确保目录存在
             os.makedirs(os.path.dirname(server_filepath), exist_ok=True)
+
+            # 记录开始接收文件数据
+            self.logger.info("开始接收文件数据",
+                           filename=filename,
+                           server_filepath=server_filepath)
+            log_file_operation("upload_data_start", filename,
+                             server_filepath=server_filepath)
 
             # 发送上传准备就绪响应
             response = FileUploadResponse(
@@ -839,6 +883,9 @@ class ChatRoomServer:
                           file_size: int, original_filename: str, uploader_id: int,
                           chat_group_id: int):
         """接收文件数据"""
+        import time
+        start_time = time.time()
+
         try:
             received_size = 0
             with open(server_filepath, 'wb') as f:
@@ -854,11 +901,31 @@ class ChatRoomServer:
                     f.write(data)
                     received_size += len(data)
 
+            # 计算传输时间
+            transfer_time = time.time() - start_time
+
             # 验证文件大小
             if received_size != file_size:
+                self.logger.error("文件传输不完整",
+                                filename=original_filename,
+                                expected_size=file_size,
+                                received_size=received_size)
+                log_file_operation("upload_incomplete", original_filename,
+                                 expected_size=file_size,
+                                 received_size=received_size)
                 os.remove(server_filepath)
                 self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件传输不完整")
                 return
+
+            # 记录文件接收完成
+            self.logger.info("文件数据接收完成",
+                           filename=original_filename,
+                           file_size=file_size,
+                           transfer_time=f"{transfer_time:.2f}s",
+                           transfer_speed=f"{(file_size / 1024 / transfer_time):.2f}KB/s")
+            log_file_operation("upload_data_complete", original_filename,
+                             file_size=file_size,
+                             transfer_time=transfer_time)
 
             # 保存文件元数据到数据库
             file_id = self.chat_manager.db.save_file_metadata(
@@ -889,6 +956,18 @@ class ChatRoomServer:
             )
             self.chat_manager.broadcast_message_to_group(file_notification)
 
+            # 记录文件上传完全成功
+            self.logger.info("文件上传完全成功",
+                           filename=original_filename,
+                           file_id=file_id,
+                           uploader_id=uploader_id,
+                           uploader_username=uploader_username,
+                           chat_group_id=chat_group_id)
+            log_file_operation("upload_complete", original_filename,
+                             file_id=file_id,
+                             uploader_id=uploader_id,
+                             uploader_username=uploader_username)
+
             # 发送上传成功响应
             response = FileUploadResponse(
                 success=True,
@@ -898,8 +977,15 @@ class ChatRoomServer:
             self.send_message(client_socket, response)
 
         except Exception as e:
-            self.logger.error("文件数据接收错误", filename=original_filename, error=str(e), exc_info=True)
-            log_file_operation("receive_data_error", original_filename, error=str(e))
+            transfer_time = time.time() - start_time
+            self.logger.error("文件数据接收错误",
+                            filename=original_filename,
+                            transfer_time=f"{transfer_time:.2f}s",
+                            error=str(e),
+                            exc_info=True)
+            log_file_operation("upload_error", original_filename,
+                             transfer_time=transfer_time,
+                             error=str(e))
             # 清理失败的文件
             if os.path.exists(server_filepath):
                 os.remove(server_filepath)
@@ -916,6 +1002,15 @@ class ChatRoomServer:
             # 获取请求数据
             file_id = message.file_id
 
+            # 记录文件下载请求开始
+            self.logger.info("收到文件下载请求",
+                           user_id=user_info['user_id'],
+                           username=user_info['username'],
+                           file_id=file_id)
+            log_file_operation("download_request_start", f"file_id_{file_id}",
+                             user_id=user_info['user_id'],
+                             username=user_info['username'])
+
             if not file_id:
                 self.send_error(client_socket, ErrorCode.INVALID_COMMAND, "文件ID不能为空")
                 return
@@ -924,6 +1019,11 @@ class ChatRoomServer:
             try:
                 file_metadata = self.chat_manager.db.get_file_metadata_by_id(file_id)
             except Exception:
+                self.logger.warning("文件下载被拒绝：文件不存在",
+                                  file_id=file_id,
+                                  user_id=user_info['user_id'])
+                log_file_operation("download_rejected_not_found", f"file_id_{file_id}",
+                                 user_id=user_info['user_id'])
                 self.send_error(client_socket, ErrorCode.FILE_NOT_FOUND, "文件不存在")
                 return
 
@@ -931,14 +1031,38 @@ class ChatRoomServer:
             if not self.chat_manager.db.is_user_in_chat_group(
                 file_metadata['chat_group_id'], user_info['user_id']
             ):
+                self.logger.warning("文件下载被拒绝：用户无权限",
+                                  file_id=file_id,
+                                  filename=file_metadata['original_filename'],
+                                  user_id=user_info['user_id'],
+                                  chat_group_id=file_metadata['chat_group_id'])
+                log_file_operation("download_rejected_permission", file_metadata['original_filename'],
+                                 user_id=user_info['user_id'],
+                                 chat_group_id=file_metadata['chat_group_id'])
                 self.send_error(client_socket, ErrorCode.PERMISSION_DENIED, "您无权下载此文件")
                 return
 
             # 检查文件是否存在
             server_filepath = file_metadata['server_filepath']
             if not os.path.exists(server_filepath):
+                self.logger.error("文件下载失败：服务器文件不存在",
+                                filename=file_metadata['original_filename'],
+                                server_filepath=server_filepath)
+                log_file_operation("download_error_file_missing", file_metadata['original_filename'],
+                                 server_filepath=server_filepath)
                 self.send_error(client_socket, ErrorCode.FILE_NOT_FOUND, "服务器上的文件不存在")
                 return
+
+            # 记录开始发送文件数据
+            self.logger.info("开始发送文件数据",
+                           filename=file_metadata['original_filename'],
+                           file_size=file_metadata['file_size'],
+                           user_id=user_info['user_id'],
+                           username=user_info['username'])
+            log_file_operation("download_data_start", file_metadata['original_filename'],
+                             file_size=file_metadata['file_size'],
+                             user_id=user_info['user_id'],
+                             username=user_info['username'])
 
             # 发送下载开始响应
             response = FileDownloadResponse(
@@ -954,23 +1078,26 @@ class ChatRoomServer:
             time.sleep(0.1)
 
             # 发送文件数据
-            self.logger.info("开始发送文件数据",
-                           filename=file_metadata['original_filename'],
-                           file_size=file_metadata['file_size'])
-            log_file_operation("send_start", file_metadata['original_filename'],
-                             file_size=file_metadata['file_size'])
-            self._send_file_data(client_socket, server_filepath, file_metadata['original_filename'])
+            self._send_file_data(client_socket, server_filepath, file_metadata['original_filename'],
+                               user_info['user_id'], user_info['username'])
 
         except Exception as e:
             self.logger.error("文件下载请求处理错误", error=str(e), exc_info=True)
             log_file_operation("download_request_error", "unknown", error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件下载失败")
 
-    def _send_file_data(self, client_socket: socket.socket, server_filepath: str, filename: str):
+    def _send_file_data(self, client_socket: socket.socket, server_filepath: str, filename: str,
+                       user_id: int = None, username: str = None):
         """发送文件数据"""
+        import time
+        start_time = time.time()
+        sent_size = 0
+
         try:
+            # 获取文件大小
+            file_size = os.path.getsize(server_filepath)
+
             # 添加延迟确保客户端能处理开始下载响应
-            import time
             time.sleep(1.0)  # 增加延迟时间，确保客户端准备好接收文件数据
 
             # 发送文件数据开始标记 - 使用更明确的分隔符
@@ -987,6 +1114,7 @@ class ChatRoomServer:
                     if not data:
                         break
                     client_socket.send(data)
+                    sent_size += len(data)
 
             # 发送文件数据结束标记 - 使用更明确的分隔符
             end_marker = b"\n===FILE_DATA_END===\n"
@@ -995,6 +1123,24 @@ class ChatRoomServer:
             # 再次添加延迟确保文件数据完全发送
             time.sleep(0.5)
 
+            # 计算传输时间和速度
+            transfer_time = time.time() - start_time
+
+            # 记录文件发送完成
+            self.logger.info("文件数据发送完成",
+                           filename=filename,
+                           file_size=file_size,
+                           sent_size=sent_size,
+                           transfer_time=f"{transfer_time:.2f}s",
+                           transfer_speed=f"{(file_size / 1024 / transfer_time):.2f}KB/s",
+                           user_id=user_id,
+                           username=username)
+            log_file_operation("download_data_complete", filename,
+                             file_size=file_size,
+                             transfer_time=transfer_time,
+                             user_id=user_id,
+                             username=username)
+
             # 发送下载完成响应
             response = FileDownloadResponse(
                 success=True,
@@ -1002,9 +1148,31 @@ class ChatRoomServer:
             )
             self.send_message(client_socket, response)
 
+            # 记录文件下载完全成功
+            self.logger.info("文件下载完全成功",
+                           filename=filename,
+                           user_id=user_id,
+                           username=username)
+            log_file_operation("download_complete", filename,
+                             user_id=user_id,
+                             username=username)
+
         except Exception as e:
-            self.logger.error("文件数据发送错误", filename=filename, error=str(e), exc_info=True)
-            log_file_operation("send_data_error", filename, error=str(e))
+            transfer_time = time.time() - start_time
+            self.logger.error("文件数据发送错误",
+                            filename=filename,
+                            sent_size=sent_size,
+                            transfer_time=f"{transfer_time:.2f}s",
+                            user_id=user_id,
+                            username=username,
+                            error=str(e),
+                            exc_info=True)
+            log_file_operation("download_error", filename,
+                             sent_size=sent_size,
+                             transfer_time=transfer_time,
+                             user_id=user_id,
+                             username=username,
+                             error=str(e))
             self.send_error(client_socket, ErrorCode.SERVER_ERROR, "文件发送失败")
 
     def handle_file_list_request(self, client_socket: socket.socket, message: FileListRequest):

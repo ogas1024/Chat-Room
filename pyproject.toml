@@ -3,7 +3,7 @@ name = "Chat-Room"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "asyncio-mqtt==0.13.0",
     "bcrypt==4.1.2",
