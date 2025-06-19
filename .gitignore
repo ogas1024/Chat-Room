@@ -346,6 +346,9 @@ htmlcov/
 # 类型检查
 .mypy_cache/
 
+# Github
+.github/
+
 # 文档生成
 docs/_build/
 docs/build/

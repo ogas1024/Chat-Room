@@ -1,0 +1,21 @@
+[project]
+name = "Chat-Room"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "asyncio-mqtt==0.13.0",
+    "bcrypt==4.1.2",
+    "black==23.11.0",
+    "flake8==6.1.0",
+    "jsonschema==4.17.3",
+    "loguru==0.7.2",
+    "pytest==7.4.3",
+    "pytest-asyncio==0.21.1",
+    "python-dateutil==2.8.2",
+    "pyyaml==6.0.1",
+    "requests==2.31.0",
+    "textual==0.47.1",
+    "zhipuai>=2.0.1",
+]
